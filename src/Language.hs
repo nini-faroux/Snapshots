@@ -1,11 +1,7 @@
 module Language where 
 
 import qualified Data.Text as T 
-
-data Val = 
-    I Int 
-  | B Bool
-  deriving (Eq, Show, Read)
+import qualified Data.Map as M 
 
 data Expr = 
     Const Val 
@@ -29,4 +25,11 @@ data Statement =
   | Print Expr 
   deriving (Show, Eq, Read)
 
+type Env = M.Map Name Val
+
 type Name = T.Text
+
+data Val = 
+    I Int 
+  | B Bool
+  deriving (Eq, Show, Read)
