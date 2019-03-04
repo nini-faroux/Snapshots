@@ -8,7 +8,7 @@ import qualified Data.Map as M
 
 type Eval a = ReaderT Env (ExceptT String Identity) a
 
-runEval :: ReaderT Env (ExceptT String Identity) Val -> Env -> Either String Val
+runEval :: ReaderT r (ExceptT String Identity) a -> r -> Either String a
 runEval rex env = runIdentity . runExceptT $ runReaderT rex env
 
 eval :: Expr -> Eval Val
@@ -22,13 +22,6 @@ eval (Eq e0 e1)  = evalComp (==) e0 e1
 eval (Gt e0 e1)  = evalComp (>) e0 e1
 eval (Lt e0 e1)  = evalComp (<) e0 e1
 eval (Var n)     = do env <- ask; lookupVar n env
-
-lookupVar :: Monad m => Name -> M.Map Name a -> m a 
-lookupVar n m = 
-    case M.lookup n m of 
-        Nothing -> fail ("Unknown Variable " ++ n)
-        Just x  -> return x
-
 
 evalInt :: (Int -> Int -> Int) -> Expr -> Expr -> Eval Val
 evalInt f e0 e1 = do
@@ -52,3 +45,10 @@ evalBool f e0 = do
     case x of 
         B x -> return . B $ f x 
         _   -> fail "Type error in boolean expression - expected type Bool"
+
+lookupVar :: Monad m => Name -> M.Map Name a -> m a 
+lookupVar n mp = 
+    case M.lookup n mp of 
+        Just x  -> return x
+        Nothing -> fail ("Unknown Variable " ++ n)
+
