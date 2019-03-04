@@ -1,10 +1,17 @@
-module Language where 
+module Language 
+    ( Expr(..)
+    , Statement(..)
+    , Env
+    , Name
+    , Val(..)
+    ) where 
 
 import qualified Data.Text as T 
 import qualified Data.Map as M 
 
 data Expr = 
     Const Val 
+  | Var Name
   | Add Expr Expr 
   | Sub Expr Expr 
   | Mul Expr Expr 
@@ -27,7 +34,7 @@ data Statement =
 
 type Env = M.Map Name Val
 
-type Name = T.Text
+type Name = String
 
 data Val = 
     I Int 
