@@ -18,6 +18,9 @@ eval (Sub e0 e1) = evalInt (-) e0 e1
 eval (Mul e0 e1) = evalInt (*) e0 e1
 eval (Div e0 e1) = evalInt div e0 e1 
 eval (Not e)     = evalBool not e
+eval (Eq e0 e1)  = evalComp (==) e0 e1
+eval (Gt e0 e1)  = evalComp (>) e0 e1
+eval (Lt e0 e1)  = evalComp (<) e0 e1
 
 evalInt :: (Int -> Int -> Int) -> Expr -> Expr -> Eval Val
 evalInt f e0 e1 = do
@@ -26,6 +29,14 @@ evalInt f e0 e1 = do
     case (x, y) of 
         (I x, I y) -> return . I $ f x y
         _          -> fail "Type error in arithmetic expression - expected type Int"
+
+evalComp :: (Int -> Int -> Bool) -> Expr -> Expr -> Eval Val 
+evalComp f e0 e1 = do
+    x <- eval e0 
+    y <- eval e1 
+    case (x, y) of 
+        (I x, I y) -> return . B $ f x y
+        _          -> fail "Type error in comparison expression - expected type Int"
 
 evalBool :: (Bool -> Bool) -> Expr -> Eval Val 
 evalBool f e0 = do
