@@ -21,6 +21,14 @@ eval (Not e)     = evalBool not e
 eval (Eq e0 e1)  = evalComp (==) e0 e1
 eval (Gt e0 e1)  = evalComp (>) e0 e1
 eval (Lt e0 e1)  = evalComp (<) e0 e1
+eval (Var n)     = do env <- ask; lookupVar n env
+
+lookupVar :: Monad m => Name -> M.Map Name a -> m a 
+lookupVar n m = 
+    case M.lookup n m of 
+        Nothing -> fail ("Unknown Variable " ++ n)
+        Just x  -> return x
+
 
 evalInt :: (Int -> Int -> Int) -> Expr -> Expr -> Eval Val
 evalInt f e0 e1 = do
