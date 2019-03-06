@@ -6,7 +6,6 @@ module Language
     , Val(..)
     ) where 
 
-import qualified Data.Text as T 
 import qualified Data.Map as M 
 
 data Expr = 

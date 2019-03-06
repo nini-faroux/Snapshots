@@ -12,7 +12,7 @@ runEval :: ReaderT r (ExceptT String Identity) a -> r -> Either String a
 runEval rex env = runIdentity . runExceptT $ runReaderT rex env
 
 eval :: Expr -> Eval Val
-eval (Const v) = return v
+eval (Const v)   = return v
 eval (Add e0 e1) = evalInt (+) e0 e1 
 eval (Sub e0 e1) = evalInt (-) e0 e1 
 eval (Mul e0 e1) = evalInt (*) e0 e1
@@ -40,8 +40,8 @@ evalComp f e0 e1 = do
         _          -> fail "Type error in comparison expression - expected type Int"
 
 evalBool :: (Bool -> Bool) -> Expr -> Eval Val 
-evalBool f e0 = do
-    x <- eval e0 
+evalBool f e = do
+    x <- eval e 
     case x of 
         B x -> return . B $ f x 
         _   -> fail "Type error in boolean expression - expected type Bool"
@@ -51,4 +51,3 @@ lookupVar n mp =
     case M.lookup n mp of 
         Just x  -> return x
         Nothing -> fail ("Unknown Variable " ++ n)
-
