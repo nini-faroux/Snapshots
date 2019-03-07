@@ -1,4 +1,13 @@
 module Main where
 
+import System.Environment 
+import Language
+import Interpreter
+
 main :: IO ()
-main = putStrLn "..."
+main = do
+  [filepath] <- getArgs
+  f <- readFile filepath
+  putStrLn f
+  let s = read f :: Statement
+  runI s
