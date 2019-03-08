@@ -39,6 +39,10 @@ execute stmt@(Assign name exp) = do
     modify (\s -> s { pEnv = M.insert name val env })
     liftIO . putStrLn $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
 
+execute (Sequence s1 s2) = do
+    execute s1
+    execute s2
+
 store :: Statement -> Either NotFound Name -> Interpreter ()
 store stmt varName = do
    prevIns <- gets instructs

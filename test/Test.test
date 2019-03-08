@@ -1,3 +1,3 @@
-Assign "x" (Const (I 25))
+Sequence (Assign "x" (Const (I 25))) (Assign "y" (Const (I 50)))
 
  
