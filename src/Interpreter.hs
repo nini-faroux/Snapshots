@@ -51,10 +51,16 @@ execute (Sequence s1 s2) = do
     execute s1
     execute s2
 
+execute stmt@(If expr s1 s2) = do
+    store stmt
+    (B b) <- runR expr 
+    store stmt
+    if b then execute s1 else execute s2
+
 execute (Print (Var name)) = do
     env <- gets pEnv 
     case lookupVar name env of 
-        Nothing -> liftIO $ putStrLn "Variable not found"
+        Nothing    -> liftIO $ putStrLn "Variable not found"
         (Just val) -> liftIO . putStrLn $ "Variable " ++ show name ++ " = " ++ show val
     
 displayI :: Name -> Val -> Interpreter () 
