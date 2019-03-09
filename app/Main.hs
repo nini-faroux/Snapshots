@@ -8,6 +8,5 @@ main :: IO ()
 main = do
   [filepath] <- getArgs
   f <- readFile filepath
-  putStrLn f
   let s = read f :: Statement
   runI s

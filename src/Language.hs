@@ -32,7 +32,6 @@ data Statement =
   deriving (Show, Eq, Read)
 
 type Env = M.Map Name Val
-
 type Name = String
 
 data Val = 
