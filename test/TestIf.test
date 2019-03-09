@@ -1,0 +1,13 @@
+Sequence 
+    (Sequence 
+        (Assign "x" (Const (I 25))) 
+        (Assign "y" (Const (I 50)))
+    ) 
+    (If (Eq (Const (I 5)) (Const (I 5))) 
+        (Print (Var ("x"))) 
+        (Print (Var ("y")))
+    )
+    
+    
+
+ 
