@@ -44,6 +44,7 @@ loop stmt = do
     cmd <- liftIO getLine 
     case cmd of 
          "next"    -> execute stmt
+         "inspect" -> displayEnv >> loop stmt
          _         -> (liftIO $ putStrLn "invalid command") >> loop stmt
 
 execute :: Statement -> Interpreter () 
