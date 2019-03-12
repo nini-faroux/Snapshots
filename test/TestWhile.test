@@ -1,0 +1,15 @@
+Sequence  
+   (Assign "x" (Const (I 5)))
+   (Sequence (Assign "acc" (Const (I 0)))
+     (Sequence 
+       (Assign "count" (Const (I 10)))
+       (While 
+         (Gt (Var "count") (Const (I 0)))
+         (Sequence
+            (Assign "acc" (Add (Var "acc") (Var "x")))
+            (Assign "count" (Sub (Var "count") (Const (I 1))))
+         )
+       ) 
+     )
+   )
+

@@ -45,7 +45,8 @@ execute stmt@(Assign name exp) = do
     ins <- gets stack
     val <- runR exp 
     modify (\s -> s { pEnv = M.insert name val env })
-    displayI name val
+    displayI
+    displayVar name val
 
 execute (Sequence s1 s2) = do
     execute s1
@@ -57,19 +58,26 @@ execute stmt@(If expr s1 s2) = do
     store stmt
     if b then execute s1 else execute s2
 
+execute stmt@(While expr s1) = do
+    store stmt 
+    (B b) <- runR expr 
+    if b then execute s1 else return ()
+
 execute (Print (Var name)) = do
     env <- gets pEnv 
     case lookupVar name env of 
         Nothing    -> liftIO $ putStrLn "Variable not found"
         (Just val) -> liftIO . putStrLn $ "Variable " ++ show name ++ " = " ++ show val
-    
-displayI :: Name -> Val -> Interpreter () 
-displayI name val = do
+
+displayI :: Interpreter () 
+displayI = do
     env <- gets pEnv 
     ins <- gets stack 
     liftIO . print $ toList env
-    liftIO $ print ins 
-    liftIO . putStrLn $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
+    liftIO $ print ins
+    
+displayVar :: Name -> Val -> Interpreter () 
+displayVar name val = liftIO . putStrLn $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
 
 store :: Statement -> Interpreter ()
 store stmt = do
