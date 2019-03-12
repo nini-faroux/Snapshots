@@ -40,11 +40,11 @@ bootState = PState {
 
 loop :: Statement -> Interpreter () 
 loop stmt = do
-   liftIO $ putStrLn "next, or inspect"
-   cmd <- liftIO getLine 
-   case cmd of 
-        "next" -> execute stmt
-        _      -> (liftIO $ putStrLn "invalid command") >> loop stmt
+    liftIO $ putStrLn "next, or inspect"
+    cmd <- liftIO getLine 
+    case cmd of 
+         "next"    -> execute stmt
+         _         -> (liftIO $ putStrLn "invalid command") >> loop stmt
 
 execute :: Statement -> Interpreter () 
 execute stmt@(Assign name exp) = do
@@ -53,35 +53,39 @@ execute stmt@(Assign name exp) = do
     ins <- gets stack
     val <- runR exp 
     modify (\s -> s { pEnv = M.insert name val env })
-    displayI
-    displayVar name val
+    displayEnv
+    displayStack
 
 execute (Sequence s1 s2) = do
-    execute s1
-    execute s2
+    loop s1
+    loop s2
 
 execute stmt@(If expr s1 s2) = do
     store stmt
     (B b) <- runR expr 
     store stmt
-    if b then execute s1 else execute s2
+    if b then loop s1 else loop s2
 
 execute stmt@(While expr s1) = do
     store stmt 
     (B b) <- runR expr 
-    if b then (do execute s1; execute stmt) else return ()
+    if b then (do loop s1; loop stmt) else return ()
 
-execute (Print (Var name)) = do
+execute stmt@(Print (Var name)) = do
+    store stmt
     env <- gets pEnv 
     case lookupVar name env of 
         Nothing    -> liftIO $ putStrLn "Variable not found"
         (Just val) -> liftIO . putStrLn $ "Variable " ++ show name ++ " = " ++ show val
 
-displayI :: Interpreter () 
-displayI = do
+displayEnv :: Interpreter () 
+displayEnv = do
     env <- gets pEnv 
-    ins <- gets stack 
     liftIO . print $ toList env
+
+displayStack :: Interpreter ()
+displayStack = do
+    ins <- gets stack
     liftIO $ print ins
     
 displayVar :: Name -> Val -> Interpreter () 
