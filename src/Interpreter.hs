@@ -40,11 +40,12 @@ bootState = PState {
 
 loop :: Statement -> Interpreter () 
 loop stmt = do
-    liftIO $ putStrLn "next, or inspect"
+    liftIO $ putStrLn "next - inspect - stack"
     cmd <- liftIO getLine 
     case cmd of 
          "next"    -> execute stmt
          "inspect" -> displayEnv >> loop stmt
+         "stack"   -> displayStack >> loop stmt
          _         -> (liftIO $ putStrLn "invalid command") >> loop stmt
 
 execute :: Statement -> Interpreter () 
