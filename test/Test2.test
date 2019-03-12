@@ -1,7 +1,0 @@
-Sequence 
-    (Sequence (Assign "x" (Const (I 25))) (Assign "y" (Const (I 50)))) 
-    (Sequence (Print (Var "x")) (Print (Var "p")))
-    
-    
-
- 

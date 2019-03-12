@@ -2,7 +2,7 @@ Sequence
    (Assign "x" (Const (I 5)))
    (Sequence (Assign "acc" (Const (I 0)))
      (Sequence 
-       (Assign "count" (Const (I 10)))
+       (Assign "count" (Const (I 5)))
        (While 
          (Gt (Var "count") (Const (I 0)))
          (Sequence
