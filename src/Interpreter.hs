@@ -38,6 +38,14 @@ bootState = PState {
   , sp = 0
   }
 
+loop :: Statement -> Interpreter () 
+loop stmt = do
+   liftIO $ putStrLn "next, or inspect"
+   cmd <- liftIO getLine 
+   case cmd of 
+        "next" -> execute stmt
+        _      -> (liftIO $ putStrLn "invalid command") >> loop stmt
+
 execute :: Statement -> Interpreter () 
 execute stmt@(Assign name exp) = do
     store stmt
@@ -89,10 +97,10 @@ runR :: Expr -> Interpreter Val
 runR exp = do
     env <- gets pEnv
     case runEval (eval exp) env of
-      Left errMsg -> notFound errMsg
+      Left errMsg -> evalError errMsg
       Right value -> return value
 
-notFound :: String -> Interpreter a
-notFound errMsg = do
+evalError :: String -> Interpreter a
+evalError errMsg = do
     liftIO . putStrLn $ "- " ++ errMsg
     throwError (IError errMsg)
