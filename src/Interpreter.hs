@@ -61,7 +61,7 @@ execute stmt@(If expr s1 s2) = do
 execute stmt@(While expr s1) = do
     store stmt 
     (B b) <- runR expr 
-    if b then execute s1 else return ()
+    if b then (do execute s1; execute stmt) else return ()
 
 execute (Print (Var name)) = do
     env <- gets pEnv 
