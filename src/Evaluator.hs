@@ -17,7 +17,9 @@ eval (Add e0 e1) = evalInt (+) e0 e1
 eval (Sub e0 e1) = evalInt (-) e0 e1 
 eval (Mul e0 e1) = evalInt (*) e0 e1
 eval (Div e0 e1) = evalInt div e0 e1 
-eval (Not e)     = evalBool not e
+eval (Not e)     = evalBool' not e
+eval (Or e0 e1)  = evalBool (||) e0 e1 
+eval (And e0 e1) = evalBool (&&) e0 e1
 eval (Eq e0 e1)  = evalComp (==) e0 e1
 eval (Gt e0 e1)  = evalComp (>) e0 e1
 eval (Lt e0 e1)  = evalComp (<) e0 e1
@@ -39,8 +41,16 @@ evalComp f e0 e1 = do
         (I x, I y) -> return . B $ f x y
         _          -> fail "Type error in comparison expression - expected type Int"
 
-evalBool :: (Bool -> Bool) -> Expr -> Eval Val 
-evalBool f e = do
+evalBool :: (Bool -> Bool -> Bool) -> Expr -> Expr -> Eval Val
+evalBool f e0 e1 = do
+    x <- eval e0
+    y <- eval e1 
+    case (x, y) of 
+        (B x, B y) -> return . B $ f x y 
+        _          -> fail "Type error in boolean expression - expected type Bool"
+
+evalBool' :: (Bool -> Bool) -> Expr -> Eval Val 
+evalBool' f e = do
     x <- eval e 
     case x of 
         B x -> return . B $ f x 
