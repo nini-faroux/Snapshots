@@ -43,7 +43,7 @@ loop stmt = do
     liftIO $ putStrLn "next - inspect - stack"
     cmd <- liftIO getLine 
     case cmd of 
-         "next"    -> execute stmt
+         "next"    -> step stmt
          "inspect" -> displayEnv >> loop stmt
          "stack"   -> displayStack >> loop stmt
          _         -> (liftIO $ putStrLn "invalid command") >> loop stmt
@@ -55,8 +55,6 @@ execute stmt@(Assign name exp) = do
     ins <- gets stack
     val <- runR exp 
     modify (\s -> s { pEnv = M.insert name val env })
-    displayEnv
-    displayStack
 
 execute (Sequence s1 s2) = do
     loop s1
@@ -79,6 +77,11 @@ execute stmt@(Print (Var name)) = do
     case lookupVar name env of 
         Nothing    -> liftIO $ putStrLn "Variable not found"
         (Just val) -> liftIO . putStrLn $ "Variable " ++ show name ++ " = " ++ show val
+
+step :: Statement -> Interpreter () 
+step s1 = do
+    liftIO . putStrLn $ "Executing instruction -> " ++ show s1
+    execute s1
 
 displayEnv :: Interpreter () 
 displayEnv = do
