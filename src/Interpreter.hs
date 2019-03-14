@@ -2,7 +2,7 @@ module Interpreter where
 
 import Language
 import Evaluator
-import Data.Map as M hiding (null)
+import Data.Map as M 
 import Data.Maybe (fromMaybe)
 import System.Environment 
 import Control.Monad (void)
