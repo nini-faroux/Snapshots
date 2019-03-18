@@ -1,6 +1,7 @@
 module Evaluator where 
 
 import Language 
+import Control.Monad.Except (throwError)
 import Control.Monad.Identity
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader 
@@ -31,7 +32,7 @@ evalInt f e0 e1 = do
     y <- eval e1 
     case (x, y) of 
         (I x, I y) -> return . I $ f x y
-        _          -> fail "Type error in arithmetic expression - expected type Int"
+        _          -> throwError "Type error in arithmetic expression - expected type Int"
 
 evalComp :: (Int -> Int -> Bool) -> Expr -> Expr -> Eval Val 
 evalComp f e0 e1 = do
@@ -39,7 +40,7 @@ evalComp f e0 e1 = do
     y <- eval e1 
     case (x, y) of 
         (I x, I y) -> return . B $ f x y
-        _          -> fail "Type error in comparison expression - expected type Int"
+        _          -> throwError "Type error in comparison expression - expected type Int"
 
 evalBool :: (Bool -> Bool -> Bool) -> Expr -> Expr -> Eval Val
 evalBool f e0 e1 = do
@@ -47,14 +48,14 @@ evalBool f e0 e1 = do
     y <- eval e1 
     case (x, y) of 
         (B x, B y) -> return . B $ f x y 
-        _          -> fail "Type error in boolean expression - expected type Bool"
+        _          -> throwError "Type error in boolean expression - expected type Bool"
 
 evalBool' :: (Bool -> Bool) -> Expr -> Eval Val 
 evalBool' f e = do
     x <- eval e 
     case x of 
         B x -> return . B $ f x 
-        _   -> fail "Type error in boolean expression - expected type Bool"
+        _   -> throwError "Type error in boolean expression - expected type Bool"
 
 lookupVar :: Monad m => Name -> M.Map Name a -> m a 
 lookupVar n mp = 
