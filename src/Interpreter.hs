@@ -5,7 +5,7 @@ import Evaluator
 import Data.Map as M 
 import Data.Maybe (fromMaybe)
 import System.Environment 
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Except 
 import Control.Monad.Except (throwError)
@@ -77,8 +77,7 @@ reset stmt = do
 jump :: Interpreter () 
 jump = do
    cp <- gets sp
-   let ptr' = cp - 2
-   modify (\s -> s { sp = ptr' } )
+   modify (\s -> s { sp = cp - 2 } )
 
 resetEnv :: Interpreter () 
 resetEnv = do
@@ -115,7 +114,8 @@ execute stmt@(If expr s1 s2) = do
 execute stmt@(While expr s1) = do
     updateState stmt
     (B b) <- runR expr 
-    if b then (do loop s1; loop stmt) else return ()
+    when b $ do loop s1 
+                loop stmt 
 
 execute stmt@(Print (Var name)) = do
     updateState stmt
