@@ -43,7 +43,7 @@ bootState = PState {
 
 loop :: Statement -> Interpreter () 
 loop stmt = do
-    liftIO $ putStrLn "next - back - inspect - stack - snapshot - pointer"
+    printI "next - back - inspect - stack - snapshot - pointer"
     cmd <- liftIO getLine 
     case cmd of 
          "next"     -> step stmt
@@ -52,14 +52,14 @@ loop stmt = do
          "stack"    -> displayStack >> loop stmt
          "pointer"  -> displaySP >> loop stmt
          "snapshot" -> displaySS >> loop stmt
-         _          -> liftIO (putStrLn "invalid command") >> loop stmt
+         _          -> printI "invalid command" >> loop stmt
 
 back :: Statement -> Interpreter ()
 back stmt = do
     cp <- gets sp 
     if cp < 2 
     then do 
-       liftIO $ putStrLn "Can't go back"
+       printI "Can't go back"
        loop stmt 
     else reset stmt
 
@@ -121,12 +121,12 @@ execute stmt@(Print (Var name)) = do
     updateState stmt
     env <- gets pEnv 
     case lookupVar name env of 
-        Nothing    -> liftIO $ putStrLn "Variable not found"
-        (Just val) -> liftIO . putStrLn $ "Variable " ++ show name ++ " = " ++ show val
+        Nothing    -> printI "Variable not found"
+        (Just val) -> printI $ "Variable " ++ show name ++ " = " ++ show val
 
 step :: Statement -> Interpreter () 
 step s1 = do
-    liftIO . putStrLn $ "Executing instruction -> " ++ show s1
+    printI $ "Executing instruction -> " ++ show s1
     execute s1
 
 updateState :: Statement -> Interpreter ()
@@ -151,25 +151,25 @@ store stmt name val = do
 displaySP :: Interpreter () 
 displaySP = do
     sp <- gets sp
-    liftIO $ print sp
+    printI sp
 
 displaySS :: Interpreter () 
 displaySS = do
     ss <- gets snapshots
-    liftIO $ print ss
+    printI ss
 
 displayEnv :: Interpreter () 
 displayEnv = do
     env <- gets pEnv 
-    liftIO . print $ toList env
+    printI $ toList env
 
 displayStack :: Interpreter ()
 displayStack = do
     ins <- gets stack
-    liftIO $ print ins
+    printI ins
     
 displayVar :: Name -> Val -> Interpreter () 
-displayVar name val = liftIO . putStrLn $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
+displayVar name val = printI $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
 
 runR :: Expr -> Interpreter Val
 runR exp = do
@@ -180,5 +180,8 @@ runR exp = do
 
 evalError :: String -> Interpreter a
 evalError errMsg = do
-    liftIO . putStrLn $ "- " ++ errMsg
+    printI $ "- " ++ errMsg
     throwError (IError errMsg)
+
+printI :: Show a => a -> Interpreter () 
+printI xs = liftIO $ print xs
