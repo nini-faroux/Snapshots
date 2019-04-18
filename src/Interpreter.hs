@@ -2,7 +2,7 @@ module Interpreter where
 
 import Language
 import Evaluator
-import Data.Map as M 
+import qualified Data.Map as M 
 import Data.Maybe (fromMaybe)
 import System.Environment 
 import Control.Monad (void, when)
@@ -161,7 +161,7 @@ displaySS = do
 displayEnv :: Interpreter () 
 displayEnv = do
     env <- gets pEnv 
-    printI $ toList env
+    printI $ M.toList env
 
 displayStack :: Interpreter ()
 displayStack = do
