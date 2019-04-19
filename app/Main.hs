@@ -1,8 +1,8 @@
 module Main where
 
-import System.Environment 
-import Language
-import Interpreter
+import           Interpreter
+import           Language
+import           System.Environment
 
 main :: IO ()
 main = do
