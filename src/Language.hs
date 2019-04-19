@@ -1,40 +1,40 @@
-module Language 
+module Language
     ( Expr(..)
     , Statement(..)
     , Env
     , Name
     , Val(..)
-    ) where 
+    ) where
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 
-data Expr = 
-    Const Val 
+data Expr =
+    Const Val
   | Var Name
-  | Add Expr Expr 
-  | Sub Expr Expr 
-  | Mul Expr Expr 
-  | Div Expr Expr 
-  | And Expr Expr 
-  | Or Expr Expr 
-  | Gt Expr Expr 
-  | Lt Expr Expr 
-  | Eq Expr Expr 
-  | Not Expr 
+  | Add Expr Expr
+  | Sub Expr Expr
+  | Mul Expr Expr
+  | Div Expr Expr
+  | And Expr Expr
+  | Or Expr Expr
+  | Gt Expr Expr
+  | Lt Expr Expr
+  | Eq Expr Expr
+  | Not Expr
   deriving (Eq, Show, Read)
 
-data Statement = 
-    Sequence Statement Statement 
+data Statement =
+    Sequence Statement Statement
   | While Expr Statement
-  | If Expr Statement Statement 
-  | Assign Name Expr 
-  | Print Expr 
+  | If Expr Statement Statement
+  | Assign Name Expr
+  | Print Expr
   deriving (Show, Eq, Read)
 
 type Env = M.Map Name Val
 type Name = String
 
-data Val = 
-    I Int 
+data Val =
+    I Int
   | B Bool
   deriving (Eq, Show, Read)
