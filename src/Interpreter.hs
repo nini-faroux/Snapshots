@@ -66,7 +66,7 @@ back stmt = do
 reset :: Statement -> Interpreter ()
 reset stmt = do
     jump
-    cp <- gets sp
+    cp  <- gets sp
     stk <- gets stack
     resetEnv
     resetSS
@@ -77,7 +77,7 @@ reset stmt = do
 jump :: Interpreter ()
 jump = do
    cp <- gets sp
-   modify (\s -> s { sp = cp - 2 } )
+   modify (\s -> s { sp = cp - 2 })
 
 resetEnv :: Interpreter ()
 resetEnv = do
@@ -131,10 +131,10 @@ step s1 = do
 
 updateState :: Statement -> Interpreter ()
 updateState stmt = do
-    cp <- gets sp
+    cp  <- gets sp
     stk <- gets stack
     env <- gets pEnv
-    ss <- gets snapshots
+    ss  <- gets snapshots
     let ss' = ss ++ [(cp, env)]
     modify (\s -> s { sp = cp + 1, stack = stk ++ [(cp, stmt)], snapshots = ss' })
 
