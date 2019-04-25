@@ -1,10 +1,14 @@
 Sequence 
-    ((
-      Sequence (Assign "x" (Const (I 25))) (Assign "y" (Const (I 50)))
-     ) 
-     (
-      Sequence (Assign "a" (Const (I 100))) (Assign "b" (Const (I 150)))
-     ))
+    (Sequence
+      (Assign "x" (Const (I 25))) 
+      (Sequence 
+        (Assign "y" (Const (I 50)))
+        (Sequence 
+          (Assign "a" (Const (I 100))) 
+          (Assign "b" (Const (I 150)))
+        )
+      )
+    )
     (Print (Var "a"))
     
     
