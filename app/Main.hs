@@ -13,16 +13,25 @@ main = do
   runI s
 
 getFile :: FilePath -> IO String
-getFile fp = readFile fp `catch` (\e -> print (e :: SomeException) >> putStrLn loading >> readFile defaultFile) 
+getFile fp = readFile fp `catch` (\e -> print (e :: SomeException) >> loading >> readFile defaultFile) 
 
 getArgs' :: IO [String]
 getArgs' = getArgs >>= parse 
   where 
-    parse [] = putStrLn loading >> return [defaultFile] 
+    parse [] = loading >> return [defaultFile] 
     parse _  = getArgs
+
+loading :: IO () 
+loading = newLine >> stars >> loadF >> stars
+
+loadF :: IO ()
+loadF = putStrLn "Loading Default file"
+
+stars :: IO ()
+stars = putStrLn "********************"
+
+newLine :: IO () 
+newLine = putStrLn ""
 
 defaultFile :: String
 defaultFile = "./test/TestWhile.test"
-
-loading :: String
-loading = "Loading Default File"
