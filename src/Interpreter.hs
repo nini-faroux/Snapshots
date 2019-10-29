@@ -5,7 +5,7 @@ import           Control.Monad.Except       (throwError)
 import           Control.Monad.IO.Class     (liftIO)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
-import qualified Data.Map                   as M
+import qualified Data.Map                   as Map
 import           Data.Maybe                 (fromMaybe)
 import           Evaluator
 import           Language
@@ -35,7 +35,7 @@ data PState =
 
 bootState :: PState
 bootState = PState {
-    pEnv = M.empty
+    pEnv = Map.empty
   , stack = []
   , sp = 0
   , snapshots = []
@@ -71,7 +71,7 @@ reset stmt = do
     resetEnv
     resetSS
     modify (\s -> s { stack = init stk })
-    let newStmt = fromMaybe stmt $ Prelude.lookup cp stk
+    let newStmt = fromMaybe stmt $ lookup cp stk
     loop newStmt
 
 jump :: Interpreter ()
@@ -83,7 +83,7 @@ resetEnv :: Interpreter ()
 resetEnv = do
     cp <- gets sp
     ss <- gets snapshots
-    let env' = fromMaybe M.empty $ Prelude.lookup cp ss
+    let env' = fromMaybe Map.empty $ Prelude.lookup cp ss
     modify (\s -> s { pEnv = env' } )
 
 resetSS :: Interpreter ()
@@ -126,7 +126,7 @@ execute stmt@(Print (Var name)) = do
 
 step :: Statement -> Interpreter ()
 step s1 = do
-    printI $ "Executing instruction -> " ++ show s1
+    printI $ "Executing instruction: " ++ show s1
     execute s1
 
 updateState :: Statement -> Interpreter ()
@@ -141,7 +141,7 @@ updateState stmt = do
 store :: Statement -> Name -> Val -> Interpreter ()
 store stmt name val = do
     env <- gets pEnv
-    modify (\s -> s { pEnv = M.insert name val env })
+    modify (\s -> s { pEnv = Map.insert name val env })
     cp <- gets sp
     ss <- gets snapshots
     env' <- gets pEnv
@@ -161,7 +161,7 @@ displaySS = do
 displayEnv :: Interpreter ()
 displayEnv = do
     env <- gets pEnv
-    printI $ M.toList env
+    printI $ Map.toList env
 
 displayStack :: Interpreter ()
 displayStack = do
@@ -184,4 +184,4 @@ evalError errMsg = do
     throwError (IError errMsg)
 
 printI :: Show a => a -> Interpreter ()
-printI xs = liftIO $ print xs
+printI xs = liftIO $ putStrLn "" >> print xs >> putStrLn ""

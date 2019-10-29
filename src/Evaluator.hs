@@ -4,7 +4,7 @@ import           Control.Monad.Except       (throwError)
 import           Control.Monad.Identity
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Reader
-import qualified Data.Map                   as M
+import qualified Data.Map                   as Map
 import           Language
 
 type Eval a = ReaderT Env (ExceptT String Identity) a
@@ -57,8 +57,8 @@ evalBool' f e = do
         B x -> return . B $ f x
         _   -> throwError "Type error in boolean expression - expected type Bool"
 
-lookupVar :: Monad m => Name -> M.Map Name a -> m a
+lookupVar :: Monad m => Name -> Map.Map Name a -> m a
 lookupVar n mp =
-    case M.lookup n mp of
+    case Map.lookup n mp of
         Just x  -> return x
         Nothing -> fail ("Unknown Variable " ++ n)
