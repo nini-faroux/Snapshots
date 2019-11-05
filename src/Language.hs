@@ -29,6 +29,7 @@ data Statement =
   | If Expr Statement Statement
   | Assign Name Expr
   | Print Expr
+  | Noop Statement
   deriving (Eq, Read)
 
 type Env  = Map.Map Name Val
