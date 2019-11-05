@@ -101,12 +101,6 @@ moveBack = do
     modify (\s -> s { sp = newSp, iStack = newIstk, vStack = newVstk, seqStack = newSstk, pEnv = newEnv })
     loop . snd $ iStk !! last sStk 
 
-dropLast :: [a] -> [a] 
-dropLast xs = take (length xs - 1) xs 
-
-dropLastTwo :: [a] -> [a] 
-dropLastTwo = dropLast . dropLast
-
 execute :: Statement -> Interpreter ()
 execute stmt@(Assign name exp) = do
     val <- runR exp
