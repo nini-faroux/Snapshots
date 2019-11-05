@@ -1,0 +1,31 @@
+Sequence  
+   (Assign "x" (Const (I 5)))
+
+   (Sequence 
+      (Assign "count" (Const (I 3)))
+
+      (Sequence 
+        (Assign "acc" (Const (I 0)))
+        
+        (Sequence 
+          (While 
+            (Gt (Var "count") (Const (I 0)))
+            (Sequence
+              (Assign "acc" (Add (Var "acc") (Var "x")))
+              (Assign "count" (Sub (Var "count") (Const (I 1))))
+            )
+          )
+          (Sequence 
+            (Assign "double" (Add (Var "acc") (Var "acc")))
+            (If (Eq (Const (I 30)) (Var "double")) 
+              (Sequence 
+                 (Assign "triple" (Add (Var "double") (Var "acc")))
+                 (Print (Var "triple"))
+              )
+              (Print (Var "double"))
+            )
+         )
+      )
+    )
+  )
+
