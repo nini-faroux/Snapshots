@@ -11,51 +11,51 @@ import           System.Environment hiding  (setEnv)
 import           Evaluator
 import           Language
 
-type Interpreter a = StateT PState (ExceptT IError IO) a
+type Interpreter a = StateT ProgramState (ExceptT IError IO) a
 
-runInterpreter :: Interpreter a -> IO (Either IError (a, PState))
+runInterpreter :: Interpreter a -> IO (Either IError (a, ProgramState))
 runInterpreter interpreter = runExceptT $ runStateT interpreter bootState
 
 runI :: Statement -> IO ()
 runI statement = void . runInterpreter $ loop statement
 
-type Id = Int
-type Pointer = Int
-type Instruction = (Id, Statement)
+type Position = Int
+type ProgramCounter = Int
+type Instruction = (Position, Statement)
 type IStack = [Instruction]
-type VStack = [(Id, Env)]
-type StatementPosition = Map.Map Statement Id 
+type VariableStack = [(Position, Env)]
+type StatementPosition = Map.Map Statement Position 
 newtype IError = IError String deriving Show
 
-data PState =
-    PState {
-        pEnv        :: Env
-      , iStack      :: IStack
-      , vStack      :: VStack
+data ProgramState =
+    ProgramState {
+        programEnv        :: Env
+      , iStack            :: IStack
+      , variableStack     :: VariableStack
       , statementPosition :: StatementPosition
-      , sp          :: Pointer
+      , programCounter    :: ProgramCounter
     } deriving Show
 
-bootState :: PState
-bootState = PState {
-    pEnv = Map.empty
+bootState :: ProgramState
+bootState = ProgramState {
+    programEnv = Map.empty
   , iStack = []
-  , vStack = []
+  , variableStack = []
   , statementPosition = Map.empty
-  , sp = 0
+  , programCounter = 0
   }
 
 loop :: Statement -> Interpreter ()
 loop stmt = do
     printI ("At Instruction: " ++ show stmt)
-    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, vStack) - (l, lookup) - (p, pointer)"
+    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, variableStack) - (l, lookup) - (p, pointer)"
     cmd <- liftIO getLine
     case cmd of
          "n"  -> step stmt
          "b"  -> back stmt
          "i"  -> displayEnv    >> loop stmt
          "s"  -> displayIStack >> loop stmt
-         "p"  -> displaySP     >> loop stmt
+         "p"  -> displayPC     >> loop stmt
          "v"  -> displayVStack >> loop stmt
          "l"  -> displayLookup >> loop stmt 
          _    -> printInvalid  >> loop stmt
@@ -67,37 +67,37 @@ step s1 = do
 
 back :: Statement -> Interpreter () 
 back stmt = do 
-    cp <- gets sp 
-    if cp < 1 
+    pc <- gets programCounter 
+    if pc < 1 
        then atStart stmt 
        else do 
          iStk <- gets iStack 
-         lStk <- gets statementPosition 
-         moveBack $ getParent stmt lStk iStk
+         sPos <- gets statementPosition 
+         moveBack $ getParent stmt sPos iStk
 
-moveBack :: (Id, Statement) -> Interpreter () 
-moveBack (newSp, newStmt) = do 
-    vStk <- gets vStack 
+moveBack :: (Position, Statement) -> Interpreter () 
+moveBack (newPc, newStmt) = do 
+    vStk <- gets variableStack 
     iStk <- gets iStack 
-    lStk <- gets statementPosition 
-    let newVstk = setVstk newSp vStk 
-    let newIstk = take newSp iStk 
+    sPos <- gets statementPosition 
+    let newVstk = setVstk newPc vStk 
+    let newIstk = take newPc iStk 
     let newEnv  = setEnv newVstk 
-    modify (\s -> s { sp = newSp, iStack = newIstk, vStack = newVstk, pEnv = newEnv })
+    modify (\s -> s { programCounter = newPc, iStack = newIstk, variableStack = newVstk, programEnv = newEnv })
     loop newStmt
 
-getParent :: Statement -> StatementPosition -> IStack -> (Id, Statement)
-getParent s lStk iStk = (index, snd $ iStk !! index) 
+getParent :: Statement -> StatementPosition -> IStack -> (Position, Statement)
+getParent s sPos iStk = (index, snd $ iStk !! index) 
     where 
-      index = fromMaybe 0 (Map.lookup s lStk)
+      index = fromMaybe 0 (Map.lookup s sPos)
 
-setVstk :: Int -> VStack -> VStack
-setVstk newSp vStk = 
-    if newSp <= 1 
+setVstk :: Int -> VariableStack -> VariableStack
+setVstk newPc vStk = 
+    if newPc <= 1 
        then [] 
-       else take newSp vStk
+       else take newPc vStk
 
-setEnv :: VStack -> Env 
+setEnv :: VariableStack -> Env 
 setEnv vStk = 
     if null vStk 
        then Map.empty 
@@ -133,16 +133,16 @@ execute stmt@(Noop s1) = loop s1
 
 execute stmt@(Print (Var name)) = do
     updateState stmt
-    env <- gets pEnv
+    env <- gets programEnv
     case lookupVar name env of
         Nothing    -> printI "Variable not found"
         (Just val) -> printI $ "Variable " ++ name ++ " = " ++ show val
 
 updateLookup :: Statement -> Statement -> Interpreter () 
 updateLookup s1 s2 = do
-    cp    <- gets sp 
-    lStk  <- gets statementPosition
-    modify (\s -> s { statementPosition = check cp s1 s2 lStk })
+    pc    <- gets programCounter 
+    sPos  <- gets statementPosition
+    modify (\s -> s { statementPosition = check pc s1 s2 sPos })
     where 
       check p s1 s2 l 
         | isNothing (Map.lookup s1 l) = mergeMap l (Map.fromList [(s1, p), (s2, p)])
@@ -153,26 +153,26 @@ mergeMap = Map.unionWith (+)
        
 updateState :: Statement -> Interpreter ()
 updateState stmt = do
-    cp   <- gets sp
+    pc   <- gets programCounter
     istk <- gets iStack
-    vstk <- gets vStack 
-    env  <- gets pEnv 
-    modify (\s -> s { sp = cp + 1, iStack = istk ++ [(cp, stmt)], vStack = vstk ++ [(cp, env)] })
+    vstk <- gets variableStack 
+    env  <- gets programEnv 
+    modify (\s -> s { programCounter = pc + 1, iStack = istk ++ [(pc, stmt)], variableStack = vstk ++ [(pc, env)] })
 
 store :: Statement -> Name -> Val -> Interpreter ()
 store stmt name val = do
-    env  <- gets pEnv
+    env  <- gets programEnv
     let newEnv = Map.insert name val env
-    modify (\s -> s { pEnv = newEnv })
+    modify (\s -> s { programEnv = newEnv })
 
-displaySP :: Interpreter ()
-displaySP = do
-    sp <- gets sp
-    printI sp
+displayPC :: Interpreter ()
+displayPC = do
+    pc <- gets programCounter
+    printI pc
 
 displayEnv :: Interpreter ()
 displayEnv = do
-    env <- gets pEnv
+    env <- gets programEnv
     printI $ Map.toList env
 
 displayIStack :: Interpreter ()
@@ -182,7 +182,7 @@ displayIStack = do
 
 displayVStack :: Interpreter () 
 displayVStack = do 
-    stk <- gets vStack 
+    stk <- gets variableStack 
     printStack stk
 
 displayLookup :: Interpreter () 
@@ -198,7 +198,7 @@ displayVar name val = printI $ "- " ++ "Value " ++ show val ++ " assigned to var
 
 runR :: Expr -> Interpreter Val
 runR expr = do
-    env <- gets pEnv
+    env <- gets programEnv
     case runEval (eval expr) env of
       Left errMsg -> evalError errMsg
       Right value -> return value
