@@ -21,7 +21,7 @@ data Expr =
   | Lt Expr Expr
   | Eq Expr Expr
   | Not Expr
-  deriving (Eq, Read)
+  deriving (Eq, Read, Ord)
 
 data Statement =
     Sequence Statement Statement
@@ -30,7 +30,7 @@ data Statement =
   | Assign Name Expr
   | Print Expr
   | Noop Statement
-  deriving (Eq, Read)
+  deriving (Eq, Read, Ord)
 
 type Env  = Map.Map Name Val
 type Name = String
@@ -38,7 +38,7 @@ type Name = String
 data Val =
     I Int
   | B Bool
-  deriving (Eq, Show, Read)
+  deriving (Eq, Show, Read, Ord)
 
 instance Show Statement where 
   show (Sequence s1 s2) = " (Sequence " ++ show s1 ++ show s2 ++ ")"

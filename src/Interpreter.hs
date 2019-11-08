@@ -24,7 +24,7 @@ type Pointer = Int
 type Instruction = (Id, Statement)
 type IStack = [Instruction]
 type VStack = [(Id, Env)]
-type LookupStack = [(Statement, Id)]
+type StatementPosition = Map.Map Statement Id 
 newtype IError = IError String deriving Show
 
 data PState =
@@ -32,7 +32,7 @@ data PState =
         pEnv        :: Env
       , iStack      :: IStack
       , vStack      :: VStack
-      , lookupStack :: LookupStack
+      , statementPosition :: StatementPosition
       , sp          :: Pointer
     } deriving Show
 
@@ -41,7 +41,7 @@ bootState = PState {
     pEnv = Map.empty
   , iStack = []
   , vStack = []
-  , lookupStack = []
+  , statementPosition = Map.empty
   , sp = 0
   }
 
@@ -72,24 +72,24 @@ back stmt = do
        then atStart stmt 
        else do 
          iStk <- gets iStack 
-         lStk <- gets lookupStack 
+         lStk <- gets statementPosition 
          moveBack $ getParent stmt lStk iStk
 
 moveBack :: (Id, Statement) -> Interpreter () 
 moveBack (newSp, newStmt) = do 
     vStk <- gets vStack 
     iStk <- gets iStack 
-    lStk <- gets lookupStack 
+    lStk <- gets statementPosition 
     let newVstk = setVstk newSp vStk 
     let newIstk = take newSp iStk 
     let newEnv  = setEnv newVstk 
     modify (\s -> s { sp = newSp, iStack = newIstk, vStack = newVstk, pEnv = newEnv })
     loop newStmt
 
-getParent :: Statement -> LookupStack -> IStack -> (Id, Statement)
+getParent :: Statement -> StatementPosition -> IStack -> (Id, Statement)
 getParent s lStk iStk = (index, snd $ iStk !! index) 
     where 
-      index = fromMaybe 0 (lookup s lStk)
+      index = fromMaybe 0 (Map.lookup s lStk)
 
 setVstk :: Int -> VStack -> VStack
 setVstk newSp vStk = 
@@ -141,12 +141,15 @@ execute stmt@(Print (Var name)) = do
 updateLookup :: Statement -> Statement -> Interpreter () 
 updateLookup s1 s2 = do
     cp    <- gets sp 
-    lStk  <- gets lookupStack
-    modify (\s -> s { lookupStack = check cp s1 s2 lStk })
+    lStk  <- gets statementPosition
+    modify (\s -> s { statementPosition = check cp s1 s2 lStk })
     where 
       check p s1 s2 l 
-        | isNothing (lookup s1 l) = l ++ [(s1, p), (s2, p)]
-        | otherwise               = l
+        | isNothing (Map.lookup s1 l) = mergeMap l (Map.fromList [(s1, p), (s2, p)])
+        | otherwise                   = l
+
+mergeMap :: (Ord k, Num v) => Map.Map k v -> Map.Map k v -> Map.Map k v 
+mergeMap = Map.unionWith (+)
        
 updateState :: Statement -> Interpreter ()
 updateState stmt = do
@@ -184,8 +187,8 @@ displayVStack = do
 
 displayLookup :: Interpreter () 
 displayLookup = do 
-    stk <- gets lookupStack 
-    printStack stk
+    stk <- gets statementPosition 
+    printStack $ Map.toList stk
 
 printStack :: Show a => [a] -> Interpreter () 
 printStack = foldr (\x -> (>>) (liftIO (print x >> putStrLn ""))) (return ()) 
