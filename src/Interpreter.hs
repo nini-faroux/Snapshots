@@ -7,7 +7,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
 import qualified Data.Map                   as Map
 import           Data.Maybe                 (fromMaybe, isNothing)
-import           System.Environment
+import           System.Environment hiding  (setEnv)
 import           Evaluator
 import           Language
 
@@ -24,7 +24,6 @@ type Pointer = Int
 type Instruction = (Id, Statement)
 type IStack = [Instruction]
 type VStack = [(Id, Env)]
-type SeqStack = [(Id, [Statement])]
 type LookupStack = [(Statement, Id)]
 newtype IError = IError String deriving Show
 
@@ -33,10 +32,8 @@ data PState =
         pEnv        :: Env
       , iStack      :: IStack
       , vStack      :: VStack
-      , seqStack    :: SeqStack
       , lookupStack :: LookupStack
       , sp          :: Pointer
-      , mode        :: Mode 
     } deriving Show
 
 bootState :: PState
@@ -44,27 +41,22 @@ bootState = PState {
     pEnv = Map.empty
   , iStack = []
   , vStack = []
-  , seqStack = []
   , lookupStack = []
   , sp = 0
-  , mode = Normal
   }
-
-data Mode = Normal | Control deriving (Eq, Show)
 
 loop :: Statement -> Interpreter ()
 loop stmt = do
-    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, vStack) - (a, seqStack) - (l, lookup) - (p, pointer)"
+    printI ("At Instruction: " ++ show stmt)
+    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, vStack) - (l, lookup) - (p, pointer)"
     cmd <- liftIO getLine
     case cmd of
          "n"  -> step stmt
-         "b"  -> back' stmt
+         "b"  -> back stmt
          "i"  -> displayEnv    >> loop stmt
          "s"  -> displayIStack >> loop stmt
-         "a"  -> displaySStack >> loop stmt
          "p"  -> displaySP     >> loop stmt
          "v"  -> displayVStack >> loop stmt
-         "m"  -> displayMode   >> loop stmt 
          "l"  -> displayLookup >> loop stmt 
          _    -> printInvalid  >> loop stmt
 
@@ -73,91 +65,46 @@ step s1 = do
     printI $ "Executing instruction: " ++ show s1
     execute s1
 
-back :: Statement -> Interpreter ()
-back stmt = do
-    cp   <- gets sp
-    if cp < 2 
-       then atStart stmt 
-       else do 
-         iStk  <- gets iStack 
-         sStk  <- gets seqStack
-         lStk  <- gets lookupStack 
-         mode' <- gets mode
-         if mode' == Control 
-            then moveBack
-            else if not $ isSequence iStk 
-                 then if null sStk 
-                      then resetStart else moveBackTwo 
-                      else moveBack 
-
-back' :: Statement -> Interpreter () 
-back' stmt = do 
+back :: Statement -> Interpreter () 
+back stmt = do 
     cp <- gets sp 
-    if cp < 2 
+    if cp < 1 
        then atStart stmt 
        else do 
          iStk <- gets iStack 
          lStk <- gets lookupStack 
-         mode' <- gets mode 
-         if mode' == Control 
-            then moveBack 
-            else moveBack' $ getParent stmt lStk iStk
+         moveBack $ getParent stmt lStk iStk
 
-moveBack' :: (Pointer, Statement) -> Interpreter () 
-moveBack' (newSp, newStmt) = do 
-    printI newSp
+moveBack :: (Id, Statement) -> Interpreter () 
+moveBack (newSp, newStmt) = do 
     vStk <- gets vStack 
     iStk <- gets iStack 
     lStk <- gets lookupStack 
-    let newVstk = newVStk newSp vStk 
+    let newVstk = setVstk newSp vStk 
     let newIstk = take newSp iStk 
-    let newEnv  = snd $ last newVstk 
+    let newEnv  = setEnv newVstk 
     modify (\s -> s { sp = newSp, iStack = newIstk, vStack = newVstk, pEnv = newEnv })
     loop newStmt
 
-getParent :: Statement -> LookupStack -> IStack -> (Pointer, Statement)
+getParent :: Statement -> LookupStack -> IStack -> (Id, Statement)
 getParent s lStk iStk = (index, snd $ iStk !! index) 
     where 
       index = fromMaybe 0 (lookup s lStk)
 
+setVstk :: Int -> VStack -> VStack
+setVstk newSp vStk = 
+    if newSp <= 1 
+       then [] 
+       else take newSp vStk
+
+setEnv :: VStack -> Env 
+setEnv vStk = 
+    if null vStk 
+       then Map.empty 
+       else snd $ last vStk 
+
 atStart :: Statement -> Interpreter () 
 atStart s = printI "Can't Go Back" >> loop s
-
-moveBack :: Interpreter () 
-moveBack = do
-    printI "moveBack"
-    sp'  <- gets sp 
-    vStk <- gets vStack 
-    sStk <- gets seqStack 
-    iStk <- gets iStack 
-    let newSp   = fst $ last sStk
-    let newVstk = take newSp vStk 
-    let newIstk = take newSp iStk 
-    let newEnv  = snd $ last newVstk 
-    let newSstk = init sStk
-    modify (\s -> s { sp = newSp, iStack = newIstk, vStack = newVstk, seqStack = newSstk, pEnv = newEnv })
-    loop . snd $ iStk !! newSp
-
-moveBackTwo :: Interpreter () 
-moveBackTwo = do 
-    printI "moveBackTwo"
-    sp'  <- gets sp 
-    vStk <- gets vStack 
-    sStk <- gets seqStack 
-    iStk <- gets iStack 
-    let newSp   = fst . last $ init sStk 
-    let newVstk = newVStk newSp vStk 
-    let newIstk = take newSp iStk 
-    let newEnv  = snd $ last newVstk 
-    let newSstk = init $ init sStk 
-    modify (\s -> s { sp = newSp, iStack = newIstk, vStack = newVstk, seqStack = newSstk, pEnv = newEnv })
-    loop . snd $ iStk !! newSp
-
-newVStk :: Int -> [a] -> [a]
-newVStk newSp vStk = 
-    if newSp == 0 
-       then [head vStk] 
-       else take newSp vStk
 
 execute :: Statement -> Interpreter ()
 execute stmt@(Assign name exp) = do
@@ -166,26 +113,21 @@ execute stmt@(Assign name exp) = do
     updateState stmt
 
 execute stmt@(Sequence s1 s2) = do
-    updateSequence s1 s2 
+    updateLookup s1 s2 
     updateState stmt
-    -- printI "here " >> printI s1 >> printI " " >> printI s2 
     loop s1
     loop s2
 
 execute stmt@(If expr s1 s2) = do
     updateState stmt
-    setControlMode
     (B b) <- runR expr
     if b then loop s1 else loop s2
-    setNormalMode
 
 execute stmt@(While expr s1) = do
     updateState stmt
-    setControlMode 
     (B b) <- runR expr
     when b $ do loop s1
                 loop stmt
-    setNormalMode 
 
 execute stmt@(Noop s1) = loop s1
 
@@ -196,40 +138,16 @@ execute stmt@(Print (Var name)) = do
         Nothing    -> printI "Variable not found"
         (Just val) -> printI $ "Variable " ++ name ++ " = " ++ show val
 
-updateSequence :: Statement -> Statement -> Interpreter () 
-updateSequence s1 s2 = do
-    mode' <- gets mode 
-    if mode' == Control 
-       then return ()  
-       else do cp   <- gets sp 
-               stk  <- gets seqStack 
-               lStk <- gets lookupStack
-               modify (\s -> s { seqStack = stk ++ [(cp, [s1, s2])], lookupStack = updateLookup cp s1 s2 lStk })
-
-updateLookup :: Pointer -> Statement -> Statement -> LookupStack -> LookupStack
-updateLookup p s1 s2 l 
-  | isNothing (lookup s1 l) = l ++ [(s1, p) , (s2, p)] 
-  | otherwise               = l 
-
-setControlMode :: Interpreter () 
-setControlMode = modify (\s -> s { mode = Control })
-
-setNormalMode :: Interpreter () 
-setNormalMode = modify (\s -> s { mode = Normal })
-
-isSequence :: [Instruction] -> Bool 
-isSequence = check . previousStatement 
+updateLookup :: Statement -> Statement -> Interpreter () 
+updateLookup s1 s2 = do
+    cp    <- gets sp 
+    lStk  <- gets lookupStack
+    modify (\s -> s { lookupStack = check cp s1 s2 lStk })
     where 
-      check s = show s !! 2 == 'S'
-
-getS :: [Instruction] -> Char 
-getS = check . previousStatement 
-   where 
-     check s = show s !! 2
-
-previousStatement :: [Instruction] -> Statement
-previousStatement = snd . last . init 
-
+      check p s1 s2 l 
+        | isNothing (lookup s1 l) = l ++ [(s1, p), (s2, p)]
+        | otherwise               = l
+       
 updateState :: Statement -> Interpreter ()
 updateState stmt = do
     cp   <- gets sp
@@ -264,20 +182,10 @@ displayVStack = do
     stk <- gets vStack 
     printStack stk
 
-displaySStack :: Interpreter () 
-displaySStack = do 
-    stk <- gets seqStack 
-    printStack stk
-
 displayLookup :: Interpreter () 
 displayLookup = do 
     stk <- gets lookupStack 
     printStack stk
-
-displayMode :: Interpreter () 
-displayMode = do 
-    mode' <- gets mode 
-    printI mode' 
 
 printStack :: Show a => [a] -> Interpreter () 
 printStack = foldr (\x -> (>>) (liftIO (print x >> putStrLn ""))) (return ()) 
@@ -302,10 +210,3 @@ printI xs = liftIO $ putStrLn "" >> print xs >> putStrLn ""
 
 printInvalid :: Interpreter () 
 printInvalid = printI "Error: Invalid Command" 
-
-resetStart :: Interpreter () 
-resetStart = do 
-    istk <- gets iStack 
-    modify (\s -> s { sp = 0, iStack = [], seqStack = [], vStack = [], pEnv = Map.empty, mode = Normal })
-    loop . snd $ head istk 
-
