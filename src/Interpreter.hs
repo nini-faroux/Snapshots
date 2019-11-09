@@ -24,6 +24,7 @@ type ProgramCounter = Int
 type Instruction = (Position, Statement)
 type IStack = [Instruction]
 type VariableStack = [(Position, Env)]
+type ExecutionStack = [Statement] 
 type StatementPosition = Map.Map Statement Position 
 newtype IError = IError String deriving Show
 
@@ -32,6 +33,7 @@ data ProgramState =
         programEnv        :: Env
       , iStack            :: IStack
       , variableStack     :: VariableStack
+      , executionStack    :: ExecutionStack 
       , statementPosition :: StatementPosition
       , programCounter    :: ProgramCounter
     } deriving Show
@@ -41,6 +43,7 @@ bootState = ProgramState {
     programEnv = Map.empty
   , iStack = []
   , variableStack = []
+  , executionStack = [] 
   , statementPosition = Map.empty
   , programCounter = 0
   }
@@ -48,7 +51,7 @@ bootState = ProgramState {
 loop :: Statement -> Interpreter ()
 loop stmt = do
     printI ("At Instruction: " ++ show stmt)
-    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, variableStack) - (l, lookup) - (p, pointer)"
+    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, variableStack) - (l, lookup) - (e, ES) - (p, pointer)"
     cmd <- liftIO getLine
     case cmd of
          "n"  -> step stmt
@@ -57,8 +60,21 @@ loop stmt = do
          "s"  -> displayIStack >> loop stmt
          "p"  -> displayPC     >> loop stmt
          "v"  -> displayVStack >> loop stmt
-         "l"  -> displayLookup >> loop stmt 
+         "e"  -> displayEStack >> loop stmt 
+         "l"  -> displaySPos >> loop stmt 
          _    -> printInvalid  >> loop stmt
+
+asyncLoop :: Statement -> Interpreter () 
+asyncLoop stmt = do 
+    es <- gets executionStack 
+    if stmt `notElem` es 
+       then return ()
+       else popES stmt >> loop stmt 
+
+popES :: Statement -> Interpreter () 
+popES stmt = do 
+    es <- gets executionStack 
+    modify (\s -> s { executionStack = filter (/= stmt) es })
 
 step :: Statement -> Interpreter ()
 step s1 = do
@@ -77,14 +93,20 @@ back stmt = do
 
 moveBack :: (Position, Statement) -> Interpreter () 
 moveBack (newPc, newStmt) = do 
+    pc   <- gets programCounter 
     vStk <- gets variableStack 
     iStk <- gets iStack 
-    sPos <- gets statementPosition 
     let newVstk = setVstk newPc vStk 
     let newIstk = take newPc iStk 
-    let newEnv  = setEnv newVstk 
-    modify (\s -> s { programCounter = newPc, iStack = newIstk, variableStack = newVstk, programEnv = newEnv })
+    modify (\s -> s { programCounter = newPc, iStack = newIstk, variableStack = newVstk, programEnv = setEnv newVstk })
     loop newStmt
+
+resetExecutionStack :: Statement -> Interpreter () 
+resetExecutionStack stmt = do 
+    es <- gets executionStack 
+    if null es 
+       then return () 
+       else modify (\s -> s { executionStack = filter (/= stmt) es })
 
 getParent :: Statement -> StatementPosition -> IStack -> (Position, Statement)
 getParent s sPos iStk = (index, snd $ iStk !! index) 
@@ -109,14 +131,16 @@ atStart s = printI "Can't Go Back" >> loop s
 execute :: Statement -> Interpreter ()
 execute stmt@(Assign name exp) = do
     val <- runR exp
+    resetExecutionStack stmt
     store stmt name val
     updateState stmt
 
 execute stmt@(Sequence s1 s2) = do
-    updateLookup s1 s2 
+    updateSPos s1 s2 
     updateState stmt
+    pushExecutionStack s2
     loop s1
-    loop s2
+    asyncLoop s2
 
 execute stmt@(If expr s1 s2) = do
     updateState stmt
@@ -133,20 +157,21 @@ execute stmt@(Noop s1) = loop s1
 
 execute stmt@(Print (Var name)) = do
     updateState stmt
+    resetExecutionStack stmt
     env <- gets programEnv
     case lookupVar name env of
         Nothing    -> printI "Variable not found"
         (Just val) -> printI $ "Variable " ++ name ++ " = " ++ show val
 
-updateLookup :: Statement -> Statement -> Interpreter () 
-updateLookup s1 s2 = do
+updateSPos :: Statement -> Statement -> Interpreter () 
+updateSPos s1 s2 = do
     pc    <- gets programCounter 
     sPos  <- gets statementPosition
     modify (\s -> s { statementPosition = check pc s1 s2 sPos })
     where 
-      check p s1 s2 l 
-        | isNothing (Map.lookup s1 l) = mergeMap l (Map.fromList [(s1, p), (s2, p)])
-        | otherwise                   = l
+      check p s1 s2 sPos 
+        | isNothing (Map.lookup s1 sPos) = mergeMap sPos (Map.fromList [(s1, p), (s2, p)])
+        | otherwise                      = sPos
 
 mergeMap :: (Ord k, Num v) => Map.Map k v -> Map.Map k v -> Map.Map k v 
 mergeMap = Map.unionWith (+)
@@ -158,6 +183,13 @@ updateState stmt = do
     vstk <- gets variableStack 
     env  <- gets programEnv 
     modify (\s -> s { programCounter = pc + 1, iStack = istk ++ [(pc, stmt)], variableStack = vstk ++ [(pc, env)] })
+
+pushExecutionStack :: Statement -> Interpreter () 
+pushExecutionStack stmt = do
+    es <- gets executionStack 
+    if stmt `elem` es 
+       then return () 
+       else modify (\s -> s { executionStack = es ++ [stmt] })
 
 store :: Statement -> Name -> Val -> Interpreter ()
 store stmt name val = do
@@ -185,13 +217,20 @@ displayVStack = do
     stk <- gets variableStack 
     printStack stk
 
-displayLookup :: Interpreter () 
-displayLookup = do 
+displayEStack :: Interpreter () 
+displayEStack = do 
+    stk <- gets executionStack 
+    printStack stk 
+
+displaySPos :: Interpreter () 
+displaySPos = do 
     stk <- gets statementPosition 
     printStack $ Map.toList stk
 
 printStack :: Show a => [a] -> Interpreter () 
-printStack = foldr (\x -> (>>) (liftIO (print x >> putStrLn ""))) (return ()) 
+printStack xs = printI stars >> foldr (\x -> (>>) (liftIO (print x >> putStrLn ""))) (return ()) xs >> printI stars 
+   where 
+     stars = "******************************"
 
 displayVar :: Name -> Val -> Interpreter ()
 displayVar name val = printI $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
