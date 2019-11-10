@@ -51,8 +51,8 @@ bootState = ProgramState {
 
 loop :: Statement -> Interpreter ()
 loop stmt = do
-    printI ("At Instruction: " ++ show stmt)
-    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, variableStack) - (l, lookup) - (e, ES)"
+    mainDisplay
+    printAtInstruction stmt
     cmd <- liftIO getLine
     case cmd of
          "n"  -> step stmt
@@ -60,8 +60,6 @@ loop stmt = do
          "i"  -> displayEnv    >> loop stmt
          "s"  -> displayIStack >> loop stmt
          "v"  -> displayVStack >> loop stmt
-         "e"  -> displayEStack >> loop stmt 
-         "l"  -> displaySPos   >> loop stmt 
          _    -> printInvalid  >> loop stmt
 
 asyncLoop :: Statement -> Interpreter () 
@@ -223,13 +221,3 @@ displayVStack :: Interpreter ()
 displayVStack = do 
     stk <- gets variableStack 
     printStack stk
-
-displayEStack :: Interpreter () 
-displayEStack = do 
-    stk <- gets executionStack 
-    printStack stk 
-
-displaySPos :: Interpreter () 
-displaySPos = do 
-    stk <- gets statementPosition 
-    printStack $ Map.toList stk
