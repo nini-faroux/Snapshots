@@ -1,4 +1,4 @@
-module Interpreter where
+module Interpreter (runI) where
 
 import           Control.Monad              (void, when)
 import           Control.Monad.Except       (throwError)
@@ -10,6 +10,7 @@ import           Data.Maybe                 (fromMaybe, isNothing)
 import           System.Environment hiding  (setEnv)
 import           Evaluator
 import           Language
+import           Utils
 
 type Interpreter a = StateT ProgramState (ExceptT IError IO) a
 
@@ -19,14 +20,14 @@ runInterpreter interpreter = runExceptT $ runStateT interpreter bootState
 runI :: Statement -> IO ()
 runI statement = void . runInterpreter $ loop statement
 
-type Position = Int
 type ProgramCounter = Int
+type Position = Int
 type Instruction = (Position, Statement)
+type StatementPosition = Map.Map Statement Position 
+
 type IStack = [Instruction]
 type VariableStack = [(Position, Env)]
 type ExecutionStack = [Statement] 
-type StatementPosition = Map.Map Statement Position 
-newtype IError = IError String deriving Show
 
 data ProgramState =
     ProgramState {
@@ -51,17 +52,16 @@ bootState = ProgramState {
 loop :: Statement -> Interpreter ()
 loop stmt = do
     printI ("At Instruction: " ++ show stmt)
-    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, variableStack) - (l, lookup) - (e, ES) - (p, pointer)"
+    printI "(n, next) - (b, back) - (i, inspect) - (s, iStack) - (v, variableStack) - (l, lookup) - (e, ES)"
     cmd <- liftIO getLine
     case cmd of
          "n"  -> step stmt
          "b"  -> back stmt
          "i"  -> displayEnv    >> loop stmt
          "s"  -> displayIStack >> loop stmt
-         "p"  -> displayPC     >> loop stmt
          "v"  -> displayVStack >> loop stmt
          "e"  -> displayEStack >> loop stmt 
-         "l"  -> displaySPos >> loop stmt 
+         "l"  -> displaySPos   >> loop stmt 
          _    -> printInvalid  >> loop stmt
 
 asyncLoop :: Statement -> Interpreter () 
@@ -78,7 +78,7 @@ popES stmt = do
 
 step :: Statement -> Interpreter ()
 step s1 = do
-    printI $ "Executing instruction: " ++ show s1
+    printExecuting s1
     execute s1
 
 back :: Statement -> Interpreter () 
@@ -109,9 +109,9 @@ resetExecutionStack stmt = do
        else modify (\s -> s { executionStack = filter (/= stmt) es })
 
 getParent :: Statement -> StatementPosition -> IStack -> (Position, Statement)
-getParent s sPos iStk = (index, snd $ iStk !! index) 
+getParent s sPos iStk = (position, snd $ iStk !! position) 
     where 
-      index = fromMaybe 0 (Map.lookup s sPos)
+      position = fromMaybe 0 (Map.lookup s sPos)
 
 setVstk :: Int -> VariableStack -> VariableStack
 setVstk newPc vStk = 
@@ -126,7 +126,7 @@ setEnv vStk =
        else snd $ last vStk 
 
 atStart :: Statement -> Interpreter () 
-atStart s = printI "Can't Go Back" >> loop s
+atStart s = printAtStart >> loop s
 
 execute :: Statement -> Interpreter ()
 execute stmt@(Assign name exp) = do
@@ -149,6 +149,7 @@ execute stmt@(If expr s1 s2) = do
 
 execute stmt@(While expr s1) = do
     updateState stmt
+    resetExecutionStack stmt 
     (B b) <- runR expr
     when b $ do loop s1
                 loop stmt
@@ -160,8 +161,8 @@ execute stmt@(Print (Var name)) = do
     resetExecutionStack stmt
     env <- gets programEnv
     case lookupVar name env of
-        Nothing    -> printI "Variable not found"
-        (Just val) -> printI $ "Variable " ++ name ++ " = " ++ show val
+        Nothing    -> printNotFound 
+        (Just val) -> printVariable name val
 
 updateSPos :: Statement -> Statement -> Interpreter () 
 updateSPos s1 s2 = do
@@ -194,8 +195,14 @@ pushExecutionStack stmt = do
 store :: Statement -> Name -> Val -> Interpreter ()
 store stmt name val = do
     env  <- gets programEnv
-    let newEnv = Map.insert name val env
-    modify (\s -> s { programEnv = newEnv })
+    modify (\s -> s { programEnv = Map.insert name val env })
+
+runR :: Expr -> Interpreter Val
+runR expr = do
+    env <- gets programEnv
+    case runEval (eval expr) env of
+      Left errMsg -> evalError errMsg
+      Right value -> return value
 
 displayPC :: Interpreter ()
 displayPC = do
@@ -226,29 +233,3 @@ displaySPos :: Interpreter ()
 displaySPos = do 
     stk <- gets statementPosition 
     printStack $ Map.toList stk
-
-printStack :: Show a => [a] -> Interpreter () 
-printStack xs = printI stars >> foldr (\x -> (>>) (liftIO (print x >> putStrLn ""))) (return ()) xs >> printI stars 
-   where 
-     stars = "******************************"
-
-displayVar :: Name -> Val -> Interpreter ()
-displayVar name val = printI $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
-
-runR :: Expr -> Interpreter Val
-runR expr = do
-    env <- gets programEnv
-    case runEval (eval expr) env of
-      Left errMsg -> evalError errMsg
-      Right value -> return value
-
-evalError :: String -> Interpreter a
-evalError errMsg = do
-    printI errMsg
-    throwError (IError errMsg)
-
-printI :: Show a => a -> Interpreter ()
-printI xs = liftIO $ putStrLn "" >> print xs >> putStrLn ""
-
-printInvalid :: Interpreter () 
-printInvalid = printI "Error: Invalid Command" 

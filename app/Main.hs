@@ -1,9 +1,10 @@
-module Main where
+module Main (main) where
 
 import           Interpreter (runI)
 import           Language (Statement)
 import           System.Environment (getArgs)
 import           Control.Exception (SomeException, catch)
+import           Utils
 
 main :: IO ()
 main = do
@@ -22,16 +23,4 @@ getArgs' = getArgs >>= parse
     parse _  = getArgs
 
 loading :: IO () 
-loading = newLine >> stars >> loadF >> stars
-
-loadF :: IO ()
-loadF = putStrLn "Loading Default file"
-
-stars :: IO ()
-stars = putStrLn "********************"
-
-newLine :: IO () 
-newLine = putStrLn ""
-
-defaultFile :: String
-defaultFile = "./test/TestWhile.test"
+loading = newLine >> printStars >> loadingFile >> printStars
