@@ -5,7 +5,7 @@ Sequence
     ) 
     (Sequence 
         (Print (Var "x")) 
-        (Print (Var "p"))
+        (Print (Var "donotexist"))
     )
     
     
