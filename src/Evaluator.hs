@@ -28,37 +28,37 @@ eval (Var n)     = do env <- ask; lookupVar n env
 
 evalInt :: (Int -> Int -> Int) -> Expr -> Expr -> Eval Val
 evalInt f e0 e1 = do
-    x <- eval e0
-    y <- eval e1
-    case (x, y) of
-        (I x, I y) -> return . I $ f x y
-        _          -> throwError "Type error in arithmetic expression - expected type Int"
+  x <- eval e0
+  y <- eval e1
+  case (x, y) of
+      (I x, I y) -> return . I $ f x y
+      _          -> throwError "Type error in arithmetic expression - expected type Int"
 
 evalComp :: (Int -> Int -> Bool) -> Expr -> Expr -> Eval Val
 evalComp f e0 e1 = do
-    x <- eval e0
-    y <- eval e1
-    case (x, y) of
-        (I x, I y) -> return . B $ f x y
-        _          -> throwError "Type error in comparison expression - expected type Int"
+  x <- eval e0
+  y <- eval e1
+  case (x, y) of
+      (I x, I y) -> return . B $ f x y
+      _          -> throwError "Type error in comparison expression - expected type Int"
 
 evalBool :: (Bool -> Bool -> Bool) -> Expr -> Expr -> Eval Val
 evalBool f e0 e1 = do
-    x <- eval e0
-    y <- eval e1
-    case (x, y) of
-        (B x, B y) -> return . B $ f x y
-        _          -> throwError "Type error in boolean expression - expected type Bool"
+  x <- eval e0
+  y <- eval e1
+  case (x, y) of
+      (B x, B y) -> return . B $ f x y
+      _          -> throwError "Type error in boolean expression - expected type Bool"
 
 evalBool' :: (Bool -> Bool) -> Expr -> Eval Val
 evalBool' f e = do
-    x <- eval e
-    case x of
-        B x -> return . B $ f x
-        _   -> throwError "Type error in boolean expression - expected type Bool"
+  x <- eval e
+  case x of
+      B x -> return . B $ f x
+      _   -> throwError "Type error in boolean expression - expected type Bool"
 
 lookupVar :: Monad m => Name -> Map.Map Name a -> m a
 lookupVar n mp =
-    case Map.lookup n mp of
-        Just x  -> return x
-        Nothing -> fail ("Unknown Variable " ++ n)
+  case Map.lookup n mp of
+      Just x  -> return x
+      Nothing -> fail ("Unknown Variable " ++ n)
