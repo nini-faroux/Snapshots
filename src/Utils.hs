@@ -59,6 +59,7 @@ mainDisplay = do
   printDisplay   "<i> : Inspect State of Current Variables                *" 
   printDisplay   "<s> : View Previously Executed Statments                *"
   printDisplay   "<v> : View State of Variables at each Instruction       *" 
+  printDisplay   "<q> : Quit Program                                      *"
   printIS stars' 
 
 printWaitLoop :: MonadIO m => m () 
@@ -92,6 +93,9 @@ printAtStart = printIS "Can't go back"
 
 printInvalid :: MonadIO m => m () 
 printInvalid = printIS "Error: Invalid Command"
+
+quitting :: MonadIO m => m () 
+quitting = printIS "Quitting..."
 
 printStarEnd :: MonadIO m => m () 
 printStarEnd = printIS starEnd

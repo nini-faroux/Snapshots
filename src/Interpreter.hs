@@ -60,6 +60,7 @@ loop stmt = do
        "i"  -> displayEnv    >> waitLoop stmt
        "s"  -> displayIStack >> waitLoop stmt
        "v"  -> displayVStack >> waitLoop stmt
+       "q"  -> quit 
        _    -> printInvalid  >> waitLoop stmt
 
 waitLoop :: Statement -> Interpreter () 
@@ -232,3 +233,6 @@ displayVStack :: Interpreter ()
 displayVStack = do 
   stk <- gets variableStack 
   printVHist stk
+
+quit :: Interpreter () 
+quit = void quitting 
