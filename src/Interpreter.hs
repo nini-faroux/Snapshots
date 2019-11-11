@@ -53,14 +53,22 @@ loop :: Statement -> Interpreter ()
 loop stmt = do
     mainDisplay
     printAtInstruction stmt
-    cmd <- liftIO getLine
+    cmd <- getCommand
     case cmd of
          "n"  -> step stmt
          "b"  -> back stmt
-         "i"  -> displayEnv    >> loop stmt
-         "s"  -> displayIStack >> loop stmt
-         "v"  -> displayVStack >> loop stmt
-         _    -> printInvalid  >> loop stmt
+         "i"  -> displayEnv    >> waitLoop stmt
+         "s"  -> displayIStack >> waitLoop stmt
+         "v"  -> displayVStack >> waitLoop stmt
+         _    -> printInvalid  >> waitLoop stmt
+
+waitLoop :: Statement -> Interpreter () 
+waitLoop stmt = do 
+    displayWaitLoop 
+    cmd <- getCommand
+    case cmd of 
+        "e" -> loop stmt 
+        _   -> printInvalid >> waitLoop stmt 
 
 asyncLoop :: Statement -> Interpreter () 
 asyncLoop stmt = do 
@@ -202,6 +210,9 @@ runR expr = do
       Left errMsg -> evalError errMsg
       Right value -> return value
 
+displayWaitLoop :: Interpreter () 
+displayWaitLoop = printWaitLoop 
+
 displayPC :: Interpreter ()
 displayPC = do
     pc <- gets programCounter
@@ -210,7 +221,7 @@ displayPC = do
 displayEnv :: Interpreter ()
 displayEnv = do
     env <- gets programEnv
-    printI $ Map.toList env
+    printEnv env
 
 displayIStack :: Interpreter ()
 displayIStack = do
@@ -220,4 +231,4 @@ displayIStack = do
 displayVStack :: Interpreter () 
 displayVStack = do 
     stk <- gets variableStack 
-    printStack stk
+    printVHist stk
