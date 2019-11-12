@@ -73,6 +73,9 @@ printEnv env
 displayVar :: MonadIO m => Name -> Val -> m ()
 displayVar name val = printI $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
 
+printBackSuccess :: MonadIO m => Statement -> m () 
+printBackSuccess stmt = printIS lines' >> printIS ("<Back To> : " ++ show stmt) >> printIS lines'
+
 printAtInstruction :: MonadIO m => Statement -> m () 
 printAtInstruction s = printIS ("<Next Instruction> : " ++ show s) 
 
@@ -86,7 +89,7 @@ printNotFound :: MonadIO m => m ()
 printNotFound = printIS "Variable not found"
 
 printAtStart :: MonadIO m => m () 
-printAtStart = printIS "Can't go back"
+printAtStart = printIS lines' >> printIS "Already at Start - Can't go Back" >> printIS lines'
 
 printInvalid :: MonadIO m => m () 
 printInvalid = printIS "Error: Invalid Command"

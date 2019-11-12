@@ -147,7 +147,7 @@ moveBack (newPc, newStmt) = do
   let newVstk = setVstk newPc vStk
   let newIstk = take newPc iStk
   modify (\s -> s { programCounter = newPc, iStack = newIstk, variableStack = newVstk, programEnv = setEnv newVstk })
-  loop newStmt
+  displayBackSuccess newStmt 
 
 -- | A statement's parent is the Sequence statement from which it was evaluated
 -- Example - (Sequence (Assign "x" ...) (Assign "y" ...))
@@ -182,7 +182,7 @@ setEnv vStk =
 
 -- | Reject attempt to move back from start
 atStart :: Statement -> Interpreter ()
-atStart s = printAtStart >> loop s
+atStart s = printAtStart >> waitLoop s
 
 -- | Statment execution functions
 execute :: Statement -> Interpreter ()
@@ -280,6 +280,9 @@ quit = void quitting
 -- the program's current state
 displayWaitLoop :: Interpreter ()
 displayWaitLoop = printWaitLoop
+
+displayBackSuccess :: Statement -> Interpreter () 
+displayBackSuccess stmt = printBackSuccess stmt >> waitLoop stmt
 
 displayEnv :: Interpreter ()
 displayEnv = do
