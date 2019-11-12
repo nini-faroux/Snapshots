@@ -1,7 +1,10 @@
-module Timer where 
+module Timer (
+    liftTimer 
+  , liftWaitTimer
+  ) where 
 
 import Control.Concurrent.STM 
-import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent     (forkIO, threadDelay)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 data State = Start | Stop
