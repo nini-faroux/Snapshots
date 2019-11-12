@@ -17,19 +17,19 @@ evalError errMsg = do
 
 -- | Interpreter Print Helpers 
 printStack :: (MonadIO m, Show p, Show s) => [(p, s)] -> m () 
-printStack [] = printIS lines' >> printIS "Empty Stack" >> printIS lines'
+printStack [] = linesMessageLines "Empty Stack" 
 printStack xs = printIS lines' >> foldr (\(pos, stmt) -> (>>) (liftIO (printIS (nameVar pos stmt) >> newLine))) (return ()) xs >> printIS lines' 
     where 
       nameVar position statment = "<" ++ show position ++ "> :" ++ show statment 
 
 printMap :: (MonadIO m, Show k, Show v) => [(k, v)] -> m () 
-printMap []  = printIS lines' >> printIS "Empty Environment" >> printIS lines'
+printMap []  = linesMessageLines "Empty Environment" 
 printMap env = printIS lines' >> foldr (\(name, var) -> (>>) (liftIO (printIS (nameEqualVar name var) >> newLine))) (return ()) env >> printIS lines'
     where 
       nameEqualVar name var = show name ++ " = " ++ show var 
 
 printVHist :: (MonadIO m, Show k, Show k', Show v) => [(k, Map.Map k' v)] -> m () 
-printVHist []  = printIS lines' >> printIS "No Variable History" >> printIS lines'
+printVHist []  = linesMessageLines "No Variable History" 
 printVHist env = printIS lines' >> foldr (\(name, var) -> (>>) (liftIO (printIS (nameEqualVar name var) >> newLine))) (return ()) env >> printIS lines'
     where 
       nameEqualVar name var = "<" ++ show name ++ "> : " ++ showTuples (Map.toList var) 
@@ -43,6 +43,9 @@ printI xs = liftIO $ newLine >> print xs >> newLine
 
 printIS :: MonadIO m => String -> m () 
 printIS xs = liftIO $ newLine >> putStrLn xs >> newLine
+
+linesMessageLines :: MonadIO m => String -> m () 
+linesMessageLines s = printIS lines' >> printIS s >> printIS lines'
 
 liftPutStrLn :: MonadIO m => String -> m () 
 liftPutStrLn xs = liftIO $ putStrLn xs 
@@ -67,20 +70,20 @@ printDisplay xs = printStarEnd >> liftPutStrLn xs
 
 printEnv :: MonadIO m => Env -> m () 
 printEnv env 
-  | Map.null env = printIS lines' >> printIS "No Variables Assigned" >> printIS lines'
+  | Map.null env = linesMessageLines "No Variables Assigned" 
   | otherwise    = printIS lines' >> (printIS . showTuples $ Map.toList env) >> printIS lines'
 
 displayVar :: MonadIO m => Name -> Val -> m ()
 displayVar name val = printI $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
 
 printBackSuccess :: MonadIO m => Statement -> m () 
-printBackSuccess stmt = printIS lines' >> printIS ("<Back To> : " ++ show stmt) >> printIS lines'
+printBackSuccess stmt = linesMessageLines ("<Back To> : " ++ show stmt)
 
 printAtInstruction :: MonadIO m => Statement -> m () 
 printAtInstruction s = printIS ("<Next Instruction> : " ++ show s) 
 
 printExecuting :: MonadIO m => Statement -> m () 
-printExecuting s = printIS lines' >> printIS ("<Executing instruction> : " ++ show s) >> printIS lines'
+printExecuting s = linesMessageLines ("<Executing instruction> : " ++ show s)
 
 printVariable :: MonadIO m => Name -> Val -> m () 
 printVariable name val = printI $ "Variable " ++ name ++ " = " ++ show val
@@ -89,7 +92,7 @@ printNotFound :: MonadIO m => m ()
 printNotFound = printIS "Variable not found"
 
 printAtStart :: MonadIO m => m () 
-printAtStart = printIS lines' >> printIS "Already at Start - Can't go Back" >> printIS lines'
+printAtStart = linesMessageLines "Already at Start - Can't go Back" 
 
 printInvalid :: MonadIO m => m () 
 printInvalid = printIS "Error: Invalid Command"
