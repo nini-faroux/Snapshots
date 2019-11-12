@@ -11,6 +11,7 @@ import           System.Environment hiding  (setEnv)
 import           Evaluator                  (runEval, eval, lookupVar)
 import           Language                   (Statement(..), Expr(..), Val(..), Env, Name)
 import           Utils
+import           Timer
 
 -- | Monad for program evaluation 
 type Interpreter a = StateT ProgramState (ExceptT IError IO) a
@@ -99,6 +100,16 @@ waitLoop stmt = do
       "e" -> loop stmt
       _   -> printInvalid >> waitLoop stmt
 
+-- | Displays Statement that is about to be evaluated 
+-- With short delay for user to see statement 
+-- Before return to main options 
+timeLoop :: Statement -> Interpreter () 
+timeLoop stmt = do 
+  timer' <- liftTimer (1 * 1500000)
+  displayTimerLoop 
+  liftWaitTimer timer'
+  execute stmt 
+
 -- | Execute "async" statement if it exists in execution stack
 -- Rejects any potential "loose" statements at the end of the program, that might remain
 -- from an async call, from before the user chose to move backwards in the execution
@@ -119,7 +130,7 @@ popES stmt = do
 -- | Execute the next statement
 step :: Statement -> Interpreter ()
 step s1 = do
-  printExecuting s1
+  displayNext s1
   execute s1
 
 -- | Step backwards in the execution
@@ -186,12 +197,6 @@ atStart s = printAtStart >> waitLoop s
 
 -- | Statment execution functions
 execute :: Statement -> Interpreter ()
-execute stmt@(Assign name exp) = do
-  val <- runR exp
-  resetExecutionStack stmt
-  store stmt name val
-  updateState stmt
-
 -- | Use asyncLoop for the second statement evaluation
 -- Avoids "loose" statements executing at end of the program
 -- when a user has moved back at one or more points during evaluation
@@ -201,6 +206,12 @@ execute stmt@(Sequence s1 s2) = do
   pushExecutionStack s2
   loop s1
   asyncLoop s2
+
+execute stmt@(Assign name exp) = do
+  val <- runR exp
+  resetExecutionStack stmt
+  store stmt name val
+  updateState stmt
 
 execute stmt@(If expr s1 s2) = do
   updateState stmt
@@ -280,6 +291,12 @@ quit = void quitting
 -- the program's current state
 displayWaitLoop :: Interpreter ()
 displayWaitLoop = printWaitLoop
+
+displayTimerLoop :: Interpreter () 
+displayTimerLoop = printTimerLoop
+
+displayNext :: Statement -> Interpreter () 
+displayNext stmt = printExecuting stmt >> timeLoop stmt
 
 displayBackSuccess :: Statement -> Interpreter () 
 displayBackSuccess stmt = printBackSuccess stmt >> waitLoop stmt

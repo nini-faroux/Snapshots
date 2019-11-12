@@ -61,6 +61,9 @@ mainDisplay = do
 printWaitLoop :: MonadIO m => m () 
 printWaitLoop = printIS "<e> : Return to Options"
 
+printTimerLoop :: MonadIO m => m () 
+printTimerLoop = printIS "Executing ..."
+
 printDisplay :: MonadIO m => String -> m () 
 printDisplay xs = printStarEnd >> liftPutStrLn xs
 
