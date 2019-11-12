@@ -8,6 +8,7 @@ module Language
 
 import qualified Data.Map as Map
 
+-- | Expression language
 data Expr =
     Const Val
   | Var Name
@@ -23,6 +24,7 @@ data Expr =
   | Not Expr
   deriving (Eq, Read, Ord)
 
+-- | Statement language
 data Statement =
     Sequence Statement Statement
   | While Expr Statement
@@ -32,14 +34,19 @@ data Statement =
   | Noop Statement
   deriving (Eq, Read, Ord)
 
+-- | Type synonyms for variable environment
 type Env  = Map.Map Name Val
 type Name = String
 
+-- | Val type with two constructors 
+-- wrapping Int and Bool types
 data Val =
     I Int
   | B Bool
   deriving (Eq, Show, Read, Ord)
 
+-- | Manually create Show instances for Statement and Expr 
+-- for better display than automatically deriving 
 instance Show Statement where 
   show (Sequence s1 s2) = " (Sequence " ++ show s1 ++ show s2 ++ ")"
   show (Assign name e1) = " (Assign " ++ name ++ " " ++ show e1 ++ ")" 

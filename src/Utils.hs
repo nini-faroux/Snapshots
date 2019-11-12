@@ -7,8 +7,7 @@ import Control.Monad.Except   (MonadError, throwError)
 import qualified Data.Map     as Map
 import Language               (Statement, Name, Val, Env)
 
--- Interpreter Error 
-
+-- | Interpreter Error 
 newtype IError = IError String deriving Show
 
 evalError :: (MonadError IError m, MonadIO m) => String -> m a 
@@ -16,8 +15,7 @@ evalError errMsg = do
     printI errMsg
     throwError (IError errMsg)
 
--- Interpreter Print Helpers 
-
+-- | Interpreter Print Helpers 
 printStack :: (MonadIO m, Show p, Show s) => [(p, s)] -> m () 
 printStack [] = printIS lines' >> printIS "Empty Stack" >> printIS lines'
 printStack xs = printIS lines' >> foldr (\(pos, stmt) -> (>>) (liftIO (printIS (nameVar pos stmt) >> newLine))) (return ()) xs >> printIS lines' 
@@ -49,8 +47,7 @@ printIS xs = liftIO $ newLine >> putStrLn xs >> newLine
 liftPutStrLn :: MonadIO m => String -> m () 
 liftPutStrLn xs = liftIO $ putStrLn xs 
 
--- Interpreter Display 
-
+-- | Interpreter Display 
 mainDisplay :: MonadIO m => m () 
 mainDisplay = do 
   printIS stars' 
@@ -100,8 +97,7 @@ quitting = printIS "Quitting..."
 printStarEnd :: MonadIO m => m () 
 printStarEnd = printIS starEnd
 
--- File loading helpers 
-
+-- | File loading helpers 
 getCommand :: MonadIO m => m String
 getCommand = liftIO getLine
 
