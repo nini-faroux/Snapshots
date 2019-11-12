@@ -233,8 +233,8 @@ updateSPos s1 s2 = do
   modify (\s -> s { statementPosition = check pc s1 s2 sPos })
   where
     check p s1 s2 sPos
-      | isNothing (Map.lookup s1 sPos) = mergeMap sPos (Map.fromList [(s1, p), (s2, p)])
-      | otherwise                      = sPos
+      | not (Map.member s1 sPos) = mergeMap sPos (Map.fromList [(s1, p), (s2, p)])
+      | otherwise                = sPos
 
 -- | Combine two Maps into one
 mergeMap :: (Ord k, Num v) => Map.Map k v -> Map.Map k v -> Map.Map k v
