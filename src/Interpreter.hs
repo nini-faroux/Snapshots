@@ -9,6 +9,7 @@ import           Control.Concurrent         (myThreadId, killThread)
 import qualified Data.Map                   as Map
 import           Data.Maybe                 (fromMaybe, isNothing)
 import           System.Environment hiding  (setEnv)
+import           System.Exit
 import           Evaluator                  (runEval, eval, lookupVar)
 import           Language                   (Statement(..), Expr(..), Val(..), Env, Name)
 import           Utils
@@ -88,7 +89,7 @@ loop stmt = do
        "i"  -> clsThen displayEnv waitLoop stmt 
        "s"  -> clsThen displayIStack waitLoop stmt 
        "v"  -> clsThen displayVStack waitLoop stmt 
-       "q"  -> clsThenDisplay displayQuit 
+       "q"  -> clsThenDisplay quit 
        _    -> clsThen printInvalid waitLoop stmt 
 
 -- | Clear the screen, run a display function and then run the next command if there is one
@@ -99,10 +100,7 @@ clsThenDisplay :: Interpreter () -> Interpreter ()
 clsThenDisplay display = liftClearScreen >> display
 
 clsThenCommand :: (Statement -> Interpreter ()) -> Statement -> Interpreter ()
-clsThenCommand = clsThen doNothing 
-
-doNothing :: Interpreter () 
-doNothing = return () 
+clsThenCommand = clsThen (return ())
 
 -- | Display some program state requested by user
 -- <e> brings user back to main options
@@ -299,9 +297,7 @@ runR expr = do
 
 -- | Quit the program
 quit :: Interpreter ()
-quit = do 
-  tid <- liftIO myThreadId 
-  liftIO $ killThread tid
+quit = quitting >> liftDelay 150000 >> liftIO exitSuccess
 
 -- | Functions for displaying some aspect of
 -- the program's current state

@@ -3,6 +3,7 @@ module Timer (
   , liftWaitTimer
   , liftFork
   , liftReadMVar
+  , liftDelay
   ) where 
 
 import Control.Concurrent.STM (TMVar, TVar, newEmptyTMVar, newTVar, readTMVar, putTMVar, readTVar, atomically)
@@ -32,6 +33,9 @@ liftWaitTimer t = liftIO $ waitTimer t
 
 waitTimer :: Timer -> IO ()
 waitTimer (_, timer) = atomically $ readTMVar timer
+
+liftDelay :: MonadIO m => Int -> m ()
+liftDelay n = liftIO $ threadDelay n
 
 timer :: Int -> IO Timer
 timer n = do
