@@ -4,6 +4,7 @@ module Utils where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except   (MonadError, throwError)
+import System.Console.ANSI    (clearScreen)
 import qualified Data.Map     as Map
 import Language               (Statement, Name, Val, Env)
 
@@ -14,6 +15,10 @@ evalError :: (MonadError IError m, MonadIO m) => String -> m a
 evalError errMsg = do
     printI errMsg
     throwError (IError errMsg)
+
+-- | Lift clearScreen from Console library
+liftClearScreen :: MonadIO m => m () 
+liftClearScreen = liftIO clearScreen
 
 -- | Interpreter Print Helpers 
 printDS :: (MonadIO m, Show a, Show b) => [(a, b)] -> String -> (a -> b -> String) -> m () 
@@ -60,9 +65,6 @@ mainDisplay = do
 
 printWaitLoop :: MonadIO m => m () 
 printWaitLoop = printIS "<e> : Return to Options"
-
-printTimerLoop :: MonadIO m => m () 
-printTimerLoop = printIS "Executing ..."
 
 printDisplay :: MonadIO m => String -> m () 
 printDisplay xs = printStarEnd >> liftPutStrLn xs

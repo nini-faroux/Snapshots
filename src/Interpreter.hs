@@ -79,17 +79,30 @@ bootState = ProgramState {
 -- Accepts and executes valid commands
 loop :: Statement -> Interpreter ()
 loop stmt = do
-  mainDisplay
+  clsThenDisplay mainDisplay 
   printAtInstruction stmt
   cmd <- getCommand
   case cmd of
-       "n"  -> step stmt
-       "b"  -> back stmt
-       "i"  -> displayEnv    >> waitLoop stmt
-       "s"  -> displayIStack >> waitLoop stmt
-       "v"  -> displayVStack >> waitLoop stmt
-       "q"  -> quit
-       _    -> printInvalid  >> waitLoop stmt
+       "n"  -> clsThenCommand step stmt 
+       "b"  -> clsThenCommand back stmt 
+       "i"  -> clsThen displayEnv waitLoop stmt 
+       "s"  -> clsThen displayIStack waitLoop stmt 
+       "v"  -> clsThen displayVStack waitLoop stmt 
+       "q"  -> clsThenDisplay displayQuit 
+       _    -> clsThen printInvalid waitLoop stmt 
+
+-- | Clear the screen, run a display function and then run the next command if there is one
+clsThen :: Interpreter () -> (Statement -> Interpreter ()) -> Statement -> Interpreter () 
+clsThen display command statement = liftClearScreen >> display >> command statement
+
+clsThenDisplay :: Interpreter () -> Interpreter ()
+clsThenDisplay display = liftClearScreen >> display
+
+clsThenCommand :: (Statement -> Interpreter ()) -> Statement -> Interpreter ()
+clsThenCommand = clsThen doNothing 
+
+doNothing :: Interpreter () 
+doNothing = return () 
 
 -- | Display some program state requested by user
 -- <e> brings user back to main options
@@ -194,7 +207,7 @@ setEnv vStk =
 
 -- | Reject attempt to move back from start
 atStart :: Statement -> Interpreter ()
-atStart s = printAtStart >> waitLoop s
+atStart = clsThen printAtStart waitLoop 
 
 -- | Statment execution functions
 execute :: Statement -> Interpreter ()
@@ -300,6 +313,9 @@ displayNext stmt = printExecuting stmt >> timeLoop stmt
 
 displayBackSuccess :: Statement -> Interpreter () 
 displayBackSuccess stmt = printBackSuccess stmt >> waitLoop stmt
+
+displayQuit :: Interpreter () 
+displayQuit = liftClearScreen >> quitting >> quit 
 
 displayEnv :: Interpreter ()
 displayEnv = do

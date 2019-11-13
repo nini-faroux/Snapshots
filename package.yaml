@@ -26,6 +26,7 @@ dependencies:
 - transformers >= 0.5.5.0
 - mtl
 - stm
+- ansi-terminal
 
 library:
   source-dirs: src
