@@ -1,21 +1,21 @@
 module Interpreter (runI) where
 
+import           Control.Concurrent         (killThread, myThreadId)
 import           Control.Monad              (void, when)
-import           Control.Monad.Except       (throwError)
 import           Control.Monad.IO.Class     (liftIO)
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.State
-import           Control.Concurrent         (myThreadId, killThread)
+import           Control.Monad.Trans.Except (ExceptT, runExceptT)
+import           Control.Monad.Trans.State  (StateT, gets, modify, runStateT)
 import qualified Data.Map                   as Map
 import           Data.Maybe                 (fromMaybe, isNothing)
-import           System.Environment hiding  (setEnv)
+import           Evaluator                  (eval, lookupVar, runEval)
+import           Language                   (Env, Expr (..), Name,
+                                             Statement (..), Val (..))
+import           System.Environment         hiding (setEnv)
 import           System.Exit
-import           Evaluator                  (runEval, eval, lookupVar)
-import           Language                   (Statement(..), Expr(..), Val(..), Env, Name)
-import           Utils
 import           Timer
+import           Utils
 
--- | Monad for program evaluation 
+-- | Monad for program evaluation
 type Interpreter a = StateT ProgramState (ExceptT IError IO) a
 
 runInterpreter :: Interpreter a -> IO (Either IError (a, ProgramState))
@@ -80,20 +80,20 @@ bootState = ProgramState {
 -- Accepts and executes valid commands
 loop :: Statement -> Interpreter ()
 loop stmt = do
-  clsThenDisplay mainDisplay 
+  clsThenDisplay mainDisplay
   printAtInstruction stmt
   cmd <- getCommand
   case cmd of
-       "n"  -> clsThenCommand step stmt 
-       "b"  -> clsThenCommand back stmt 
-       "i"  -> clsThen displayEnv waitLoop stmt 
-       "s"  -> clsThen displayIStack waitLoop stmt 
-       "v"  -> clsThen displayVStack waitLoop stmt 
-       "q"  -> clsThenDisplay quit 
-       _    -> clsThen printInvalid waitLoop stmt 
+       "n" -> clsThenCommand step stmt
+       "b" -> clsThenCommand back stmt
+       "i" -> clsThen displayEnv waitLoop stmt
+       "s" -> clsThen displayIStack waitLoop stmt
+       "v" -> clsThen displayVStack waitLoop stmt
+       "q" -> clsThenDisplay quit
+       _   -> clsThen printInvalid waitLoop stmt
 
 -- | Clear the screen, run a display function and then run the next command if there is one
-clsThen :: Interpreter () -> (Statement -> Interpreter ()) -> Statement -> Interpreter () 
+clsThen :: Interpreter () -> (Statement -> Interpreter ()) -> Statement -> Interpreter ()
 clsThen display command statement = liftClearScreen >> display >> command statement
 
 clsThenDisplay :: Interpreter () -> Interpreter ()
@@ -112,22 +112,22 @@ waitLoop stmt = do
       "e" -> loop stmt
       _   -> printInvalid >> waitLoop stmt
 
--- | Displays Statement that is about to be evaluated 
--- With short delay for user to see statement 
--- Use MVar to prevent the user from running other commands 
+-- | Displays Statement that is about to be evaluated
+-- With short delay for user to see statement
+-- Use MVar to prevent the user from running other commands
 -- while the statement display is run in child thread
-timeLoop :: Statement -> Interpreter () 
-timeLoop stmt = do 
-  t <- liftFork $ do 
+timeLoop :: Statement -> Interpreter ()
+timeLoop stmt = do
+  t <- liftFork $ do
           timer' <- liftTimer 890000
           liftWaitTimer timer'
   liftReadMVar t
-  execute stmt 
+  execute stmt
 
 -- | Execute "async" statement if it exists in execution stack
 -- Rejects any potential "loose" statements at the end of the program, that might remain
 -- from an async call, from before the user chose to move backwards in the execution
--- As these statements will have been removed from ES on step backwards 
+-- As these statements will have been removed from ES on step backwards
 asyncLoop :: Statement -> Interpreter ()
 asyncLoop stmt = do
   es <- gets executionStack
@@ -143,12 +143,12 @@ popES stmt = do
 
 -- | Execute the next statement
 step :: Statement -> Interpreter ()
-step = displayNext 
+step = displayNext
 
 -- | Step backwards in the execution
 -- Unless already at the start of the program
 -- Always move back to the "Parent" Statement
--- Would otherwise be possible to lose connection to the next 
+-- Would otherwise be possible to lose connection to the next
 -- Sequence Statement in the program and incorrectly terminate early
 back :: Statement -> Interpreter ()
 back stmt = do
@@ -170,7 +170,7 @@ moveBack (newPc, newStmt) = do
   let newVstk = setVstk newPc vStk
   let newIstk = take newPc iStk
   modify (\s -> s { programCounter = newPc, iStack = newIstk, variableStack = newVstk, programEnv = setEnv newVstk })
-  displayBackSuccess newStmt 
+  displayBackSuccess newStmt
 
 -- | A statement's parent is the Sequence statement from which it was evaluated
 -- Example - (Sequence (Assign "x" ...) (Assign "y" ...))
@@ -205,7 +205,7 @@ setEnv vStk =
 
 -- | Reject attempt to move back from start
 atStart :: Statement -> Interpreter ()
-atStart = clsThen printAtStart waitLoop 
+atStart = clsThen printAtStart waitLoop
 
 -- | Statment execution functions
 execute :: Statement -> Interpreter ()
@@ -247,7 +247,7 @@ execute stmt@(Print (Var name)) = do
       Nothing    -> printNotFound
       (Just val) -> printVariable name val
 
--- | Add the two new statements of a Sequence statement with the position 
+-- | Add the two new statements of a Sequence statement with the position
 -- (PC) of the Sequence (parent) statement to the StatementPosition Map
 updateSPos :: Statement -> Statement -> Interpreter ()
 updateSPos s1 s2 = do
@@ -304,14 +304,14 @@ quit = quitting >> liftDelay 150000 >> liftIO exitSuccess
 displayWaitLoop :: Interpreter ()
 displayWaitLoop = printWaitLoop
 
-displayNext :: Statement -> Interpreter () 
+displayNext :: Statement -> Interpreter ()
 displayNext stmt = printExecuting stmt >> timeLoop stmt
 
-displayBackSuccess :: Statement -> Interpreter () 
+displayBackSuccess :: Statement -> Interpreter ()
 displayBackSuccess stmt = printBackSuccess stmt >> waitLoop stmt
 
-displayQuit :: Interpreter () 
-displayQuit = liftClearScreen >> quitting >> quit 
+displayQuit :: Interpreter ()
+displayQuit = liftClearScreen >> quitting >> quit
 
 displayEnv :: Interpreter ()
 displayEnv = do

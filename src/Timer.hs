@@ -1,20 +1,22 @@
 module Timer (
-    liftTimer 
+    liftTimer
   , liftWaitTimer
   , liftFork
   , liftReadMVar
   , liftDelay
-  ) where 
+  ) where
 
-import Control.Concurrent.STM (TMVar, TVar, newEmptyTMVar, newTVar, readTMVar, putTMVar, readTVar, atomically)
-import Control.Concurrent     (MVar, newEmptyMVar, readMVar, putMVar, forkIO, threadDelay, forkFinally)
-import Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Concurrent     (MVar, forkFinally, forkIO, putMVar, 
+                                         newEmptyMVar, readMVar, threadDelay)
+import           Control.Concurrent.STM (TMVar, TVar, atomically, newEmptyTMVar,
+                                         newTVar, putTMVar, readTMVar, readTVar)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 
 data State = Start | Stop
 type Timer = (TVar State, TMVar ())
 
-liftFork :: MonadIO m => IO () -> m (MVar ()) 
-liftFork action = liftIO $ forkThread action 
+liftFork :: MonadIO m => IO () -> m (MVar ())
+liftFork action = liftIO $ forkThread action
 
 forkThread :: IO () -> IO (MVar ())
 forkThread action = do
@@ -22,13 +24,13 @@ forkThread action = do
     _ <- forkFinally action (\_ -> putMVar lock ())
     return lock
 
-liftReadMVar :: MonadIO m => MVar a -> m a 
-liftReadMVar var = liftIO $ readMVar var 
+liftReadMVar :: MonadIO m => MVar a -> m a
+liftReadMVar var = liftIO $ readMVar var
 
-liftTimer :: MonadIO m => Int -> m Timer 
-liftTimer n = liftIO $ timer n 
+liftTimer :: MonadIO m => Int -> m Timer
+liftTimer n = liftIO $ timer n
 
-liftWaitTimer :: MonadIO m => Timer -> m () 
+liftWaitTimer :: MonadIO m => Timer -> m ()
 liftWaitTimer t = liftIO $ waitTimer t
 
 waitTimer :: Timer -> IO ()

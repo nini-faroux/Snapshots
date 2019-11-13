@@ -38,26 +38,26 @@ data Statement =
 type Env  = Map.Map Name Val
 type Name = String
 
--- | Val type with two constructors 
+-- | Val type with two constructors
 -- wrapping Int and Bool types
 data Val =
     I Int
   | B Bool
   deriving (Eq, Show, Read, Ord)
 
--- | Manually create Show instances for Statement and Expr 
--- for better display than automatically deriving 
-instance Show Statement where 
+-- | Manually create Show instances for Statement and Expr
+-- for better display than automatically deriving
+instance Show Statement where
   show (Sequence s1 s2) = " (Sequence " ++ show s1 ++ show s2 ++ ")"
-  show (Assign name e1) = " (Assign " ++ name ++ " " ++ show e1 ++ ")" 
+  show (Assign name e1) = " (Assign " ++ name ++ " " ++ show e1 ++ ")"
   show (While e1 s1)    = " (While " ++ show e1 ++ show s1 ++ ")"
-  show (If e1 s1 s2)    = " (If " ++ show e1 ++ show s2 ++ show s2 ++ ")" 
+  show (If e1 s1 s2)    = " (If " ++ show e1 ++ show s2 ++ show s2 ++ ")"
   show (Print e1)       = " (Print " ++ show e1 ++ ")"
 
-instance Show Expr where 
+instance Show Expr where
   show (Const val) = "(Const " ++ show val ++ ")"
   show (Var name)  = "(Var " ++ name ++ ") "
-  show (Add e1 e2) = "(Add " ++ show e1 ++ show e2 ++ ")" 
+  show (Add e1 e2) = "(Add " ++ show e1 ++ show e2 ++ ")"
   show (Sub e1 e2) = "(Sub " ++ show e1 ++ show e2 ++ ")"
   show (Mul e1 e2) = "(Mul " ++ show e1 ++ show e2 ++ ")"
   show (Div e1 e2) = "(Div " ++ show e1 ++ show e2 ++ ")"
