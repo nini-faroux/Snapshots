@@ -119,7 +119,7 @@ waitLoop stmt = do
 timeLoop :: Statement -> Interpreter () 
 timeLoop stmt = do 
   t <- liftFork $ do 
-          timer' <- liftTimer (1 * 1500000)
+          timer' <- liftTimer 890000
           liftWaitTimer timer'
   liftReadMVar t
   execute stmt 
