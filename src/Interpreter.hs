@@ -5,6 +5,7 @@ import           Control.Monad.Except       (throwError)
 import           Control.Monad.IO.Class     (liftIO)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
+import           Control.Concurrent         (myThreadId, killThread)
 import qualified Data.Map                   as Map
 import           Data.Maybe                 (fromMaybe, isNothing)
 import           System.Environment hiding  (setEnv)
@@ -102,12 +103,14 @@ waitLoop stmt = do
 
 -- | Displays Statement that is about to be evaluated 
 -- With short delay for user to see statement 
--- Before return to main options 
+-- Use MVar to prevent the user from running other commands 
+-- while the statement display is run in child thread
 timeLoop :: Statement -> Interpreter () 
 timeLoop stmt = do 
-  timer' <- liftTimer (1 * 1500000)
-  displayTimerLoop 
-  liftWaitTimer timer'
+  t <- liftFork $ do 
+          timer' <- liftTimer (1 * 1500000)
+          liftWaitTimer timer'
+  liftReadMVar t
   execute stmt 
 
 -- | Execute "async" statement if it exists in execution stack
@@ -129,9 +132,7 @@ popES stmt = do
 
 -- | Execute the next statement
 step :: Statement -> Interpreter ()
-step s1 = do
-  displayNext s1
-  execute s1
+step = displayNext 
 
 -- | Step backwards in the execution
 -- Unless already at the start of the program
@@ -285,15 +286,14 @@ runR expr = do
 
 -- | Quit the program
 quit :: Interpreter ()
-quit = void quitting
+quit = do 
+  tid <- liftIO myThreadId 
+  liftIO $ killThread tid
 
 -- | Functions for displaying some aspect of
 -- the program's current state
 displayWaitLoop :: Interpreter ()
 displayWaitLoop = printWaitLoop
-
-displayTimerLoop :: Interpreter () 
-displayTimerLoop = printTimerLoop
 
 displayNext :: Statement -> Interpreter () 
 displayNext stmt = printExecuting stmt >> timeLoop stmt
