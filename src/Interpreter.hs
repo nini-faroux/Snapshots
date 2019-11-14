@@ -5,15 +5,17 @@ import           Control.Monad              (void, when)
 import           Control.Monad.IO.Class     (liftIO)
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.State  (StateT, gets, modify, runStateT)
+import           Control.Monad.Except       (throwError)
 import qualified Data.Map                   as Map
 import           Data.Maybe                 (fromMaybe, isNothing)
 import           Evaluator                  (eval, lookupVar, runEval)
 import           Language                   (Env, Expr (..), Name,
                                              Statement (..), Val (..))
 import           System.Environment         hiding (setEnv)
+import           System.Console.ANSI
 import           System.Exit
 import           Timer
-import           Utils
+import           Display
 
 -- | Monad for program evaluation
 type Interpreter a = StateT ProgramState (ExceptT IError IO) a
@@ -53,6 +55,9 @@ type VariableStack = [(Position, Env)]
 -- in a Sequence Statement, as these are not evaluated immediately
 type ExecutionStack = [Statement]
 
+-- | Interpreter Error
+newtype IError = IError String deriving Show
+
 -- | The program state type to be passed around
 -- Contains the above data structures, the Env and the PC
 data ProgramState =
@@ -80,17 +85,17 @@ bootState = ProgramState {
 -- Accepts and executes valid commands
 loop :: Statement -> Interpreter ()
 loop stmt = do
-  clsThenDisplay mainDisplay
-  printAtInstruction stmt
+  liftClearScreen >> mainDisplay stmt
   cmd <- getCommand
   case cmd of
-       "n" -> clsThenCommand step stmt
-       "b" -> clsThenCommand back stmt
-       "i" -> clsThen displayEnv waitLoop stmt
-       "s" -> clsThen displayIStack waitLoop stmt
-       "v" -> clsThen displayVStack waitLoop stmt
-       "q" -> clsThenDisplay quit
-       _   -> clsThen printInvalid waitLoop stmt
+       "n"  -> clsThenCommand step stmt
+       "b"  -> clsThenCommand back stmt
+       "vn" -> clsThen (viewNext stmt) waitLoop stmt
+       "i"  -> clsThen displayEnv waitLoop stmt
+       "s"  -> clsThen displayIStack waitLoop stmt
+       "v"  -> clsThen displayVStack waitLoop stmt
+       "q"  -> clsThenDisplay quit
+       _    -> clsThen printInvalid waitLoop stmt
 
 -- | Clear the screen, run a display function and then run the next command if there is one
 clsThen :: Interpreter () -> (Statement -> Interpreter ()) -> Statement -> Interpreter ()
@@ -114,7 +119,7 @@ waitLoop stmt = do
 
 -- | Displays Statement that is about to be evaluated
 -- With short delay for user to see statement
--- Use MVar to prevent the user from running other commands
+-- Use MVar to prevent other user commands from running
 -- while the statement display is run in child thread
 timeLoop :: Statement -> Interpreter ()
 timeLoop stmt = do
@@ -295,6 +300,11 @@ runR expr = do
     Left errMsg -> evalError errMsg
     Right value -> return value
 
+evalError :: String -> Interpreter a
+evalError errMsg = do
+    printI errMsg
+    throwError (IError errMsg)
+
 -- | Quit the program
 quit :: Interpreter ()
 quit = quitting >> liftDelay 150000 >> liftIO exitSuccess
@@ -306,6 +316,9 @@ displayWaitLoop = printWaitLoop
 
 displayNext :: Statement -> Interpreter ()
 displayNext stmt = printExecuting stmt >> timeLoop stmt
+
+viewNext :: Statement -> Interpreter ()
+viewNext = printAtInstruction
 
 displayBackSuccess :: Statement -> Interpreter ()
 displayBackSuccess stmt = printBackSuccess stmt >> waitLoop stmt

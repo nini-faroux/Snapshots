@@ -1,14 +1,16 @@
 module Main (main) where
 
 import           Control.Exception  (SomeException, catch)
+import           Control.Concurrent (threadDelay)
 import           Interpreter        (runI)
 import           Language           (Statement)
 import           System.Environment (getArgs)
-import           Utils
+import           Display
 
 -- | Program entry point
 main :: IO ()
 main = do
+  setTerminal
   [filepath] <- getArgs'
   f <- getFile filepath
   let s = read f :: Statement
@@ -29,4 +31,4 @@ getArgs' = getArgs >>= parse
     parse _  = getArgs
 
 loading :: IO ()
-loading = newLine >> printStars >> loadingFile >> printStars
+loading = newLine >> printHashes >> loadingFile >> printHashes >> threadDelay 990000
