@@ -1,6 +1,5 @@
 module Interpreter (runI) where
 
-import           Control.Concurrent         (killThread, myThreadId)
 import           Control.Monad              (void, when)
 import           Control.Monad.IO.Class     (liftIO)
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
@@ -92,6 +91,7 @@ loop stmt = do
        "b"  -> clsThenCommand back stmt
        "vn" -> clsThen (viewNext stmt) waitLoop stmt
        "i"  -> clsThen displayEnv waitLoop stmt
+       "iv" -> clsThen displayVar waitLoop stmt 
        "s"  -> clsThen displayIStack waitLoop stmt
        "v"  -> clsThen displayVStack waitLoop stmt
        "q"  -> clsThenDisplay quit
@@ -249,7 +249,7 @@ execute stmt@(Print (Var name)) = do
   resetExecutionStack stmt
   env <- gets programEnv
   case lookupVar name env of
-      Nothing    -> printNotFound
+      Nothing    -> printNotFound name
       (Just val) -> printVariable name val
 
 -- | Add the two new statements of a Sequence statement with the position
@@ -330,6 +330,11 @@ displayEnv :: Interpreter ()
 displayEnv = do
   env <- gets programEnv
   printEnv env
+
+displayVar :: Interpreter () 
+displayVar = do
+  env <- gets programEnv 
+  printVar env 
 
 displayIStack :: Interpreter ()
 displayIStack = do

@@ -12,29 +12,23 @@ import           System.Console.ANSI
 liftSetColour :: MonadIO m => ColorIntensity -> Color -> m ()
 liftSetColour intensity colour = liftIO $ setSGR [SetColor Foreground intensity colour]
 
-setCyan :: MonadIO m => m () 
+setCyan :: MonadIO m => m ()
 setCyan = liftSetColour Vivid Cyan
 
-setDullCyan :: MonadIO m => m () 
-setDullCyan = liftSetColour Dull Cyan 
+setDullCyan :: MonadIO m => m ()
+setDullCyan = liftSetColour Dull Cyan
 
-setMagenta :: MonadIO m => m () 
+setMagenta :: MonadIO m => m ()
 setMagenta = liftSetColour Vivid Magenta
 
-setRed :: MonadIO m => m () 
-setRed = liftSetColour Vivid Red 
+setRed :: MonadIO m => m ()
+setRed = liftSetColour Vivid Red
 
 liftClearScreen :: MonadIO m => m ()
 liftClearScreen = liftIO clearScreen
 
-liftBlink :: MonadIO m => m () 
-liftBlink = liftIO $ setSGR [SetBlinkSpeed RapidBlink]
-
 liftScrollUp :: MonadIO m => Int -> m ()
 liftScrollUp n = liftIO $ scrollPageUp n
-
-liftScrollDown :: MonadIO m => Int -> m ()
-liftScrollDown n = liftIO $ scrollPageDown n
 
 setTerminal :: IO ()
 setTerminal = do
@@ -47,7 +41,7 @@ printDS [] s _           = linesMessageLines s
 printDS xs _ helperPrint = printLines >> foldr (\(a, b) -> (>>) (liftIO (printIS (helperPrint a b) >> newLine))) (return ()) xs >> printLines
 
 printStack :: (MonadIO m, Show p, Show s) => [(p, s)] -> m ()
-printStack xs = liftSetColour Vivid Cyan >> printDS xs "Empty Stack" posStmt
+printStack xs = liftSetColour Vivid Cyan >> printDS xs "No Instruction History" posStmt
   where
     posStmt p s = "<" ++ show p ++ "> :" ++ show s
 
@@ -76,11 +70,12 @@ liftPutStrLn xs = liftIO $ putStrLn xs
 mainDisplay :: MonadIO m => Statement -> m ()
 mainDisplay stmt = do
   liftPrintStars
-  liftSetColour Vivid Red
+  setRed
   liftPutStrLn   "<n>  : Execute Next Instruction                          *"
   printDisplay   "<b>  : Step Back in Program's Exeuction                  *"
   printDisplay   "<vn> : View Next Instruction                             *"
   printDisplay   "<i>  : Inspect State of Current Variables                *"
+  printDisplay   "<iv> : Inspect a specific Variable                       *"
   printDisplay   "<s>  : View Previously Executed Statments                *"
   printDisplay   "<v>  : View State of Variables at each Instruction       *"
   printDisplay   "<q>  : Quit Program                                      *"
@@ -98,8 +93,28 @@ printEnv env
   | Map.null env = setDullCyan >> linesMessageLines "No Variables Assigned"
   | otherwise    = setDullCyan >> printLines >> (printIS . showTuples $ Map.toList env) >> printLines
 
-displayVar :: MonadIO m => Name -> Val -> m ()
-displayVar name val = printI $ "- " ++ "Value " ++ show val ++ " assigned to variable " ++ show name
+printVar :: MonadIO m => Env -> m ()
+printVar env = do
+  setCyan
+  linesMessageLines "Enter the Variable name"
+  name <- getCommand
+  case Map.lookup name env of
+    Nothing    -> printNotFound name
+    (Just val) -> printVarFound name val
+
+printVarFound :: MonadIO m => Name -> Val -> m ()
+printVarFound name val = do
+  liftClearScreen
+  printLines
+  liftPutStrLn $ "Variable " ++ show name ++ " = " ++ show val
+  printLines
+
+printNotFound :: MonadIO m => Name -> m ()
+printNotFound name = do
+  liftClearScreen
+  printLines
+  liftPutStrLn $ "Variable " ++ show name ++ " not found"
+  printLines
 
 printBackSuccess :: MonadIO m => Statement -> m ()
 printBackSuccess stmt = setDullCyan >> linesMessageLines ("<Back To> : " ++ show stmt)
@@ -110,15 +125,12 @@ printAtInstruction s = do
   linesMessageLines ("<Next Instruction> : " ++ show s)
 
 printExecuting :: MonadIO m => Statement -> m ()
-printExecuting s = do 
+printExecuting s = do
   liftSetColour Dull Cyan
   linesMessageLines ("<Executing instruction> : " ++ show s)
 
 printVariable :: MonadIO m => Name -> Val -> m ()
 printVariable name val = printI $ "Variable " ++ name ++ " = " ++ show val
-
-printNotFound :: MonadIO m => m ()
-printNotFound = printIS "Variable not found"
 
 printAtStart :: MonadIO m => m ()
 printAtStart = setRed >> linesMessageLines "Already at Start - Can't go Back"
@@ -133,7 +145,7 @@ quitting :: MonadIO m => m ()
 quitting = setRed >> printIS "Quitting..."
 
 printStarEnd :: MonadIO m => m ()
-printStarEnd = do 
+printStarEnd = do
   setMagenta
   printIS starEnd
   setRed
@@ -157,7 +169,7 @@ loadingFile = putStrLn "Loading Default file   #"
 printStars :: IO ()
 printStars = putStrLn stars
 
-printHashes :: IO () 
+printHashes :: IO ()
 printHashes = putStrLn hashes
 
 starEnd :: String
@@ -169,7 +181,7 @@ stars' = "**********************************************************"
 stars :: String
 stars = "************************"
 
-hashes :: String 
+hashes :: String
 hashes = "########################"
 
 lines' :: String
