@@ -1,4 +1,4 @@
-## Snapshots
+<h1>Snapshots</h1>
 
 ### Interpreter for a toy imperative language
 
