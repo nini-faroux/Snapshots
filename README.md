@@ -2,6 +2,8 @@
 
 Interpreter for a toy imperative language
 
+![Snapshots Demo](assets/run.gif)
+
 <h4>Features</h4>
 
 \* Step forward through the program's evaluation
